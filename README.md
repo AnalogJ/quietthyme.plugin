@@ -1,3 +1,4 @@
+export PATH=/Applications/calibre.app/Contents/MacOS/:$PATH
 calibre-debug -s; calibre-customize -b .; calibre
 
 

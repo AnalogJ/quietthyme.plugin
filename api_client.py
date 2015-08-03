@@ -21,6 +21,20 @@ class ApiClient():
         #self.network_manager = QNetworkAccessManager()
         self.logger = logger
 
+    def auth(self, library_uuid, library_name):
+        '''
+        This function will authenticate with Quietthyme and generate a JWT for subsequent api calls.
+        :param library_uuid: calibre library identifier
+        :return: quietthyme jwt.
+        '''
+        self.logger.debug(sys._getframe().f_code.co_name)
+        query_args = {'library_uuid': library_uuid,
+                      'library_name': library_name}
+
+        response = self._make_json_request('GET', '/api/auth/calibre', query_args=query_args)
+        self.logger.debug(response)
+        return response
+
     def status(self, library_uuid, library_name):
         '''
         This function will retrieve the current QuietThyme status and verify that the user can
@@ -29,10 +43,8 @@ class ApiClient():
         :return: quietthyme status object
         '''
         self.logger.debug(sys._getframe().f_code.co_name)
-        query_args = {'library_uuid': library_uuid,
-                      'library_name': library_name}
 
-        response = self._make_json_request('GET', '/calibre/status', query_args=query_args)
+        response = self._make_json_request('GET', '/api/storage/status')
         self.logger.debug(response)
         return response
 
@@ -186,8 +198,8 @@ class ApiClient():
                 headers['Content-Type'] = 'application/json'
                 headers['Content-Length'] = clen
 
-            if prefs['access_token']:
-                headers['Authorization'] = 'Bearer ' + prefs['access_token']
+            if 'token' in prefs:
+                headers['Authorization'] = 'Bearer ' + prefs['token']
 
             self.logger.debug('before request')
             http.request(action, path, json_data or None, headers)
@@ -253,7 +265,7 @@ class ApiClient():
             http.putrequest("POST", url)
             http.putheader('Content-type', form.get_content_type())
             http.putheader('Content-length', str(len(form_buffer)))
-            http.putheader('Authorization', "Bearer "+prefs['access_token'])
+            http.putheader('Authorization', "Bearer "+prefs['token'])
             http.endheaders()
             http.send(form_buffer)
         except socket.error, e:

@@ -232,8 +232,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
             except urllib2.URLError:
                 return None
         elif self.is_connected:
-            #the device is already connected
-            return True
+            #the device is already connected, skip so that open is not called repeatedly.
+            return None
         else:
             #the device has been ejected, or is no longer connected.
             return None
@@ -325,10 +325,10 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger().debug(sys._getframe().f_code.co_name)
         # At this point we know that the user has a valid network connection.
         # check if there is an access token
-        if not prefs['access_token']:
+        #if not prefs['access_token']:
            # if there is no access_token set, the user hasn't logged in. We can't do anything.
-           raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
-        response = ApiClient(logger()).status(library_uuid, current_library_name())
+        #   raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
+        response = ApiClient(logger()).auth(library_uuid, current_library_name())
 
         #TODO: ensure the access token hasn't expired
         #TODO: make a connection to Quietthyme to download the user's settings
@@ -339,14 +339,20 @@ class QuietthymeDevicePlugin(DevicePlugin):
         #if everything is successful set is_connected to true.
         if not response['success']:
             raise OpenFeedback(response['error_msg'])
+        else:
+            prefs['token'] = response['data']['token']
         self.is_connected = response['success']
 
-        #store the settings in memory
+        status_response = ApiClient(logger()).status(library_uuid, current_library_name())
+        if not status_response['success']:
+            raise OpenFeedback(status_response['error_msg'])
+
+    #store the settings in memory
         self.current_library_uuid = library_uuid
         #mimic from
         #https://github.com/kovidgoyal/calibre/blob/master/src/calibre/devices/usbms/driver.py
         #https://github.com/kovidgoyal/calibre/blob/master/src/calibre/devices/usbms/device.py
-        self.qt_settings = response['settings']
+        self.qt_settings = status_response['data']['settings']
         #return True
 
     def eject(self):
@@ -393,7 +399,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger().debug(sys._getframe().f_code.co_name)
         #TODO: this will be dynamically stored, rather than hardcoded
 
-        self.report_progress(1.0, 'Get deviced information...')
+        self.report_progress(1.0, 'Get device information...')
         return (self.qt_settings.get('device_name', 'QuietThyme'),
                 self.qt_settings.get('version', ''),
                 self.qt_settings.get('version', ''),
@@ -527,7 +533,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         booklist = BookList(None, None, None)
         for qt_metadata in qt_booklist:
-            if qt_metadata['bookstorages']:
+            if qt_metadata['storage']:
                 logger().debug(qt_metadata)
                 booklist.add_book(Book.from_quietthyme_metadata(qt_metadata), False)
         return booklist
@@ -872,6 +878,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         library. This method is called at startup and when the calibre library
         changes while connected.
         '''
+        #TODO: Library info changed, relogin/get a new token.
         logger().debug(sys._getframe().f_code.co_name)
         logger().debug("LIBRARY INFO CHANGED",library_name, library_uuid, field_metadata)
         pass
@@ -1024,13 +1031,13 @@ class QuietthymeDevicePlugin(DevicePlugin):
         qt_book_data = ApiClient(logger()).create_book(local_metadata)
 
         #TODO: this bookstorage uploader is a bit flimsy
-        qt_filename = self._create_upload_path('',local_metadata, local_filepath)
-        qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["id"],
-                                                      storage_type,
-                                                      local_filepath,
-                                                      qt_filename,
-                                                      replace_file)
-        qt_book_data['bookstorages'] = [qt_bookstorage_data]
+        # qt_filename = self._create_upload_path('',local_metadata, local_filepath)
+        # qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["id"],
+        #                                               storage_type,
+        #                                               local_filepath,
+        #                                               qt_filename,
+        #                                               replace_file)
+        # qt_book_data['bookstorages'] = [qt_bookstorage_data]
 
         #TODO: merge the book metadata with the bookstorage response to create qt_metadata
 

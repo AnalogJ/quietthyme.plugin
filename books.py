@@ -36,12 +36,12 @@ class Book(Metadata):
         #authors
         for author in qt_metadata['authors']:
             book.authors.append(author['name'])
-        book.size = qt_metadata['bookstorages'][0]['storage_size']
+        book.size = qt_metadata['storage']['storage_size']
         #book.datetime = qt_metadata[]
         book.quietthyme_id = qt_metadata['id']
-        book.path = qt_metadata['bookstorages'][0]['storage_type'] + '://' + \
-                    qt_metadata['bookstorages'][0]['id'] + '/' + \
-                    qt_metadata['bookstorages'][0]['file_name'] + '.' + qt_metadata['bookstorages'][0]['format']
+        book.path = qt_metadata['storage']['storage_type'] + '://' + \
+                    qt_metadata['storage']['id'] + '/' + \
+                    qt_metadata['storage']['file_name'] + '.' + qt_metadata['storage']['format']
         book.thumbnail = None
         book.tags = qt_metadata['tags']
 
