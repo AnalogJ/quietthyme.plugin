@@ -133,9 +133,9 @@ class ApiClient():
         This function will download a list of book metadata from QuietThyme.
         '''
 
-        response = self._make_json_request('GET', '/book', query_args={'storage_type': storage_type})
+        response = self._make_json_request('GET', '/api/book', query_args={'storage_type': storage_type})
         self.logger.debug(response)
-        return response
+        return response['data']
 
 
     def create_bookstorage(self, qt_book_id, storage_type, local_filepath, qt_filename, replace_file=False):
@@ -160,20 +160,20 @@ class ApiClient():
         self.logger.debug(sys._getframe().f_code.co_name)
 
         import re
-        pattern = r"(?P<storage_type>\S+)://(?P<bookstorage_id>\S+)/(?P<file_name>\D+)"
+        pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        response = self._make_json_request('DELETE', '/storage/' + parsed_data['bookstorage_id'])
+        response = self._make_json_request('DELETE', '/storage/' + parsed_data['id'])
         self.logger.debug(response)
         return response
 
     def download_bookstorage(self, calibre_storage_path):
         self.logger.debug(sys._getframe().f_code.co_name)
         import re
-        pattern = r"(?P<storage_type>\S+)://(?P<bookstorage_id>\S+)/(?P<file_name>\D+)"
+        pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        return self._make_json_request('GET', '/storage/' + parsed_data['bookstorage_id'] + '/download', json_response=False)
+        return self._make_json_request('GET', '/storage/' + parsed_data['book_id'] + '/download', json_response=False)
 
     def _make_json_request(self, action, endpoint='/', query_args={}, json_data='', json_response=True):
         self.logger.debug(sys._getframe().f_code.co_name)

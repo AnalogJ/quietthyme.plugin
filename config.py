@@ -6,7 +6,7 @@ from __future__ import (unicode_literals, division, absolute_import,
 __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
-from PyQt5.Qt import QWidget, QHBoxLayout, QWebView, QUrl, QSize, QNetworkAccessManager
+from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin, QUrl, QSize, QNetworkAccessManager, QWebSettings
 from calibre.utils.config import JSONConfig
 
 # This is where all preferences for this plugin will be stored
@@ -38,8 +38,9 @@ class ConfigWidget(QWidget):
         self.l = QHBoxLayout()
         self.setLayout(self.l)
 
-        self.config_url = QUrl('http://'+prefs['api_base']+'/calibre/config')
+        self.config_url = QUrl.fromEncoded('http://'+prefs['api_base']+'/link/start')
 
+        #self.config_url = QUrl.fromEncoded('https://www.dropbox.com/1/oauth2/authorize?redirect_uri=https%3A%2F%2Fbuild.quietthyme.com%2Flink%2Fcallback%2Fdropbox&response_type=code&state=1Me5zYICEI&client_id=ucfoqze4zbaa379')
         # self.label = QLabel(' Hello world4 &message:')
         # self.l.addWidget(self.label)
         #
@@ -49,24 +50,24 @@ class ConfigWidget(QWidget):
         # self.label.setBuddy(self.msg)
 
 
-        self.webview = QTWebView(bearer_token=prefs['access_token'])
-
+        self.webview = QTWebView(bearer_token=prefs['token'])
+        #self.webview.setPage(WebPage())
         #setup events for the webview.
         def url_changed(url):
             print('url changed: ', url)
-
-        def load_finished(ok):
-            print('load finished, ok: ', ok)
-            if self.webview.page().mainFrame().url() == self.config_url:
-                print('requested url = current url')
-                token = self.webview.page().mainFrame().evaluateJavaScript("""
-                getAuthToken();
-                """)
-                print(token)
-                prefs['access_token'] = token
-
-
-        self.webview.loadFinished.connect(load_finished)
+        #
+        # def load_finished(ok):
+        #     print('load finished, ok: ', ok)
+        #     if self.webview.page().mainFrame().url() == self.config_url:
+        #         print('requested url = current url')
+        #         # token = self.webview.page().mainFrame().evaluateJavaScript("""
+        #         # getAuthToken();
+        #         # """)
+        #         # print(token)
+        #         # prefs['token'] = token
+        #
+        #
+        # self.webview.loadFinished.connect(load_finished)
         self.webview.urlChanged.connect(url_changed)
         # self.webview.connect(self.webview, SIGNAL("linkClicked(const QUrl&)"), link_clicked)
         # self.webview.connect(self.webview, SIGNAL('loadStarted()'), load_started)
@@ -74,9 +75,17 @@ class ConfigWidget(QWidget):
 
         self.webview.load(self.config_url)
         self.webview.setMinimumSize(QSize(600, 600))
+        #self.webview.settings().setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
+        self.webview.settings().setAttribute(QWebSettings.JavascriptEnabled, True)
+        self.webview.settings().setAttribute(QWebSettings.PluginsEnabled, False)
+        self.webview.settings().setAttribute(QWebSettings.LocalContentCanAccessRemoteUrls, True)
+        self.webview.settings().setAttribute(QWebSettings.LocalContentCanAccessFileUrls, True)
+        #self.webview.settings().setAttribute(QWebSettings.XSSAuditingEnabled, False)
         self.webview.show()
         self.l.addWidget(self.webview)
 
+        for scheme in ['http', 'https','data']:
+            QWebSecurityOrigin.addLocalScheme(scheme)
         # self.checkbox_beta = QCheckBox("Enable Beta Mode")
         # self.l.addWidget(self.checkbox_beta)
 
@@ -87,10 +96,24 @@ class ConfigWidget(QWidget):
     def validate(self):
         return self.webview.page().mainFrame().url() == self.config_url
 
+class QTWebPage(QWebPage):
+    """ Settings for the browser."""
+
+    def __init__(self, logger=None, parent=None):
+        super(QWebPage, self).__init__(parent)
+
+    def userAgentForUrl(self, url):
+        """ Returns a User Agent that will be seen by the website. """
+        return "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.15 (KHTML, like Gecko) Chrome/24.0.1295.0 Safari/537.15"
+
+    def javaScriptConsoleMessage(self, msg, lineNumber, sourceID):
+        print("JsConsole(%s:%d): %s" % (sourceID, lineNumber, msg))
+
 class QTWebView(QWebView):
 
     def __init__(self, parent=None, bearer_token=None):
         super(QWebView,self).__init__(parent)
+        self.setPage(QTWebPage())
         self.nam = QTNetworkManager(bearer_token)
         self.page().setNetworkAccessManager(self.nam)
 

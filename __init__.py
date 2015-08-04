@@ -533,7 +533,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         booklist = BookList(None, None, None)
         for qt_metadata in qt_booklist:
-            if qt_metadata['storage']:
+            if qt_metadata['storage_identifier']:
                 logger().debug(qt_metadata)
                 booklist.add_book(Book.from_quietthyme_metadata(qt_metadata), False)
         return booklist
