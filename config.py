@@ -6,7 +6,7 @@ from __future__ import (unicode_literals, division, absolute_import,
 __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
-from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QUrl, QSize, QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
+from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
 from calibre.utils.config import JSONConfig
 
 # This is where all preferences for this plugin will be stored
@@ -207,19 +207,25 @@ class QTNetworkManager(QNetworkAccessManager):
     def __init__(self, bearer_token=None):
         super(QNetworkAccessManager,self).__init__()
         self.bearer_token = bearer_token
+        self.sslErrors.connect(self._ssl_errors)
 
+    def _ssl_errors(self,reply, errors):
+        reply.ignoreSslErrors()
 
-    # def createRequest(self, operation, request, data):
-    #     request_host = request.url().host()
-    #     quietthyme_host = QUrl.fromEncoded('http://' + prefs['api_base']).host()
-    #
-    #     if self.bearer_token and (quietthyme_host == request_host):
-    #         print("Adding QT Auth header: %s", request.url())
-    #         request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
-    #
-    #
-    #     reply = QNetworkAccessManager.createRequest(self,operation, request, data)
-    #
+    def createRequest(self, operation, request, data):
+        request_host = request.url().host()
+        quietthyme_host = QUrl.fromEncoded('http://' + prefs['api_base']).host()
+
+        if self.bearer_token and (quietthyme_host == request_host):
+            print("Adding QT Auth header: %s", request.url())
+            request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
+
+        # sslConfig = request.sslConfiguration()
+        # sslConfig.setProtocol(QSsl.SslV3)
+        # request.setSslConfiguration(sslConfig)
+
+        reply = QNetworkAccessManager.createRequest(self,operation, request, data)
+        return reply
     #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
     #     reply = QTNetworkReply(self, reply,operation)
     #
