@@ -6,7 +6,7 @@ from __future__ import (unicode_literals, division, absolute_import,
 __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
-from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
+from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
 from calibre.utils.config import JSONConfig
 
@@ -28,15 +28,12 @@ prefs.defaults['api_base'] = 'build.quietthyme.com'
 # (String) the access token used to communicate with the quietthyme API
 # TODO: this should be None when deployed.
 prefs.defaults['token'] = ''
-# (String) the UTC expiry date for the access token, None means it never expires. (Will be validated on server side)
-prefs.defaults['access_token_expires'] = None
-
 
 class ConfigWidget(QWidget):
 
     def __init__(self):
         QWidget.__init__(self)
-        self.l = QHBoxLayout()
+        self.l = QVBoxLayout()
         self.setLayout(self.l)
 
         self.config_url = QUrl.fromEncoded('http://'+prefs['api_base']+'/link/start')
@@ -48,7 +45,10 @@ class ConfigWidget(QWidget):
         self.webview = QTWebView(bearer_token=prefs['token'])
 
         self.webview.load(self.config_url)
-        self.webview.setMinimumSize(QSize(600, 600))
+        if prefs['debug_mode']:
+            self.webview.setMinimumSize(QSize(600, 300))
+        else:
+            self.webview.setMinimumSize(QSize(600, 600))
         self.global_settings = self.webview.page().settings() #QWebSettings.globalSettings()
         self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
         self.global_settings.setAttribute(QWebSettings.JavascriptEnabled, True)
@@ -64,6 +64,7 @@ class ConfigWidget(QWidget):
 
         if prefs['debug_mode']:
             self.inspector = QWebInspector()
+            self.inspector.setMinimumSize(QSize(600, 300))
             self.l.addWidget(self.inspector)
             self.inspector.setPage(self.webview.page())
 
