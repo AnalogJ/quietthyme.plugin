@@ -6,7 +6,7 @@ from __future__ import (unicode_literals, division, absolute_import,
 __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
-from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin, QUrl, QSize, QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
+from PyQt5.Qt import QWidget, QHBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QUrl, QSize, QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
 from calibre.utils.config import JSONConfig
 
 # This is where all preferences for this plugin will be stored
@@ -41,7 +41,7 @@ class ConfigWidget(QWidget):
         #self.config_url = QUrl.fromEncoded('http://'+prefs['api_base']+'/link/start')
 
         self.config_url = QUrl.fromEncoded('https://www.dropbox.com/login')
-        #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin#identifier')
+        #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin')
         #self.config_url = QUrl.fromEncoded('http://www.google.com')
         # self.label = QLabel(' Hello world4 &message:')
         # self.l.addWidget(self.label)
@@ -74,7 +74,7 @@ class ConfigWidget(QWidget):
 
         self.webview.load(self.config_url)
         self.webview.setMinimumSize(QSize(600, 600))
-        self.global_settings = QWebSettings.globalSettings()
+        self.global_settings = self.webview.page().settings() #QWebSettings.globalSettings()
         self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
         self.global_settings.setAttribute(QWebSettings.JavascriptEnabled, True)
         self.global_settings.setAttribute(QWebSettings.JavascriptCanOpenWindows, True)
@@ -86,6 +86,13 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.PrivateBrowsingEnabled, True)
         self.webview.show()
         self.l.addWidget(self.webview)
+
+        self.inspector = QWebInspector()
+        self.l.addWidget(self.inspector)
+        self.inspector.setPage(self.webview.page())
+        #self.inspector.showMaximized()
+
+
 
         # for scheme in ['http','https','data']:
         #     QWebSecurityOrigin.addLocalScheme(scheme)
@@ -167,6 +174,8 @@ class QTWebView(QWebView):
         self.page().setNetworkAccessManager(self.nam)
 
         self.urlChanged.connect(self._url_changed)
+
+
     #
     # def _result_available(self, ok):
     #     print("Result availale")
