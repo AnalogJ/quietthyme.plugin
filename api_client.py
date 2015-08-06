@@ -111,9 +111,9 @@ class ApiClient():
         self.logger.debug(json_data)
 
         response = self._make_json_request('POST', '/api/book', json_data=json_data, query_args={'source': 'calibre'})
-        self.logger.debug(response['data']['id'])
+        self.logger.debug(response['data']['objectId'])
 
-        qt_metadata['id'] = response['data']['id']
+        qt_metadata['objectId'] = response['data']['objectId']
         return qt_metadata
         # resp = self._make_json_request(QNetworkAccessManager.PostOperation, "/book", json_data=json_data)
         # resp.error.connect(self.handleError)
@@ -122,7 +122,7 @@ class ApiClient():
 
     def set_book_cover(self, qt_book_id, cover_local_filepath):
         self.logger.debug(sys._getframe().f_code.co_name)
-        response = self._make_upload_file_request("/book_cover",
+        response = self._make_upload_file_request("/book_cover", {'source':'calibre'},
                                                   {"book_id": qt_book_id},
                                                   {"file": cover_local_filepath}
                                                   #{'file':'/home/jason/Documents/Daulton, John/Galactic Mage, The/Galactic Mage, The - John Daulton.mobi'}
@@ -145,7 +145,7 @@ class ApiClient():
 
         qt_filename_base, qt_filename_ext = os.path.splitext(qt_filename)
         self.logger.debug(qt_filename_base,qt_filename_ext)
-        response = self._make_upload_file_request("/api/storage",
+        response = self._make_upload_file_request("/api/storage/upload", {'source':'calibre'},
                                                   {"book_id": qt_book_id,
                                                    "storage_type": storage_type,
                                                    "file_name": qt_filename_base,
@@ -235,7 +235,7 @@ class ApiClient():
 
 
     #from https://github.com/kovidgoyal/calibre/blob/ef09e886b3d95d6de5c76ad3a179694ae75c65f4/setup/pypi.py#L235
-    def _make_upload_file_request(self, endpoint="/", form_fields={}, filepath_fields={}):
+    def _make_upload_file_request(self, endpoint="/",query_args={}, form_fields={}, filepath_fields={}):
         """
 
         :param form_fields: simple key value form fields. key=fieldname, value=fieldvalue
@@ -259,6 +259,10 @@ class ApiClient():
         url = self.api_base + endpoint
         schema, netloc, url, params, query, fragments = \
             urlparse.urlparse(url)
+
+        if query_args:
+            encoded_args = urllib.urlencode(query_args)
+            url += "?" + encoded_args
 
         try:
             form_buffer =  form.get_binary().getvalue()

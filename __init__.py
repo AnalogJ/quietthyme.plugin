@@ -323,6 +323,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         '''
         logger().debug(sys._getframe().f_code.co_name)
+        print("LIBRARY INFO CHANGED")
+
         # At this point we know that the user has a valid network connection.
         # check if there is an access token
         #if not prefs['access_token']:
@@ -1032,13 +1034,13 @@ class QuietthymeDevicePlugin(DevicePlugin):
         qt_book_data = ApiClient(logger()).create_book(local_metadata)
 
         #TODO: this bookstorage uploader is a bit flimsy
-        # qt_filename = self._create_upload_path('',local_metadata, local_filepath)
-        # qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["id"],
-        #                                               storage_type,
-        #                                               local_filepath,
-        #                                               qt_filename,
-        #                                               replace_file)
-        # qt_book_data['bookstorages'] = [qt_bookstorage_data]
+        qt_filename = self._create_upload_path('',local_metadata, local_filepath)
+        qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["id"],
+                                                      storage_type,
+                                                      local_filepath,
+                                                      qt_filename,
+                                                      replace_file)
+        #qt_book_data['bookstorages'] = [qt_bookstorage_data]
 
         #TODO: merge the book metadata with the bookstorage response to create qt_metadata
 
@@ -1058,7 +1060,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
 
 
-        return qt_book_data
+        return qt_bookstorage_data['data']
 
     def _upload_cover(self,qt_metadata,
                           local_metadata):
