@@ -120,10 +120,11 @@ class ApiClient():
         # resp.finished.connect(self.handleFinished)
         # self.logger.debug(resp.readAll())
 
-    def set_book_cover(self, qt_book_id, cover_local_filepath):
+    def set_book_cover(self, qt_book_id, cover_local_filepath,qt_cover_filename):
         self.logger.debug(sys._getframe().f_code.co_name)
-        response = self._make_upload_file_request("/book_cover", {'source':'calibre'},
-                                                  {"book_id": qt_book_id},
+        response = self._make_upload_file_request("/api/storage/thumb/upload", {'source':'calibre'},
+                                                  {"book_id": qt_book_id,
+                                                   "file_name": qt_cover_filename},
                                                   {"file": cover_local_filepath}
                                                   #{'file':'/home/jason/Documents/Daulton, John/Galactic Mage, The/Galactic Mage, The - John Daulton.mobi'}
         )

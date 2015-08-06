@@ -71,11 +71,11 @@ class Book(Metadata):
 
         #book.thumbnail = Thumbnail("/home/jason/cover.jpg")
         #book.thumbnail = Thumbnail('http://ak-hdl.buzzfed.com/static/enhanced/webdr06/2013/7/30/18/grid-cell-14969-1375222023-8.jpg')
-        cover_url = qt_metadata.get('image',{}).get('url','')
-        if cover_url:
+        thumb_url = qt_metadata.get('thumb_url','')
+        if thumb_url:
             import urllib2
             try:
-                book.thumbnail = urllib2.urlopen(cover_url).read()
+                book.thumbnail = urllib2.urlopen(thumb_url).read()
             except:
                 book.thumbnail = None
 

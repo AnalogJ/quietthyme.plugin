@@ -106,7 +106,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     BCD         = None
 
     #: Height for thumbnails on the device
-    THUMBNAIL_HEIGHT = 500
+    THUMBNAIL_HEIGHT = 200
     #: Width for thumbnails on the device. Setting this will force thumbnails
     #: to this size, not preserving aspect ratio. If it is not set, then
     #: the aspect ratio will be preserved and the thumbnail will be no higher
@@ -578,15 +578,17 @@ class QuietthymeDevicePlugin(DevicePlugin):
             #qt_filepath = self._create_upload_path(self.qt_settings[card_id].get('prefix'),local_metadata, fname)
 
             qt_metadata = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_type','quietthyme'), local_metadata,  replace_file=True)
-            dest_info.append((card_id, qt_metadata)) #pass the calibre metadata (mdata) as a backup, should not be used though.
             try:
 
-                if local_metadata['cover']:
-                    dest_info['image'] = self._upload_cover(qt_metadata,local_metadata)
+                if local_metadata.get('cover'):
+                    # dest_info['image'] = self._upload_cover(qt_metadata,local_metadata)
+                    qt_metadata = self._upload_cover(qt_metadata,local_metadata)
+
             except:  # Failure to upload cover is not catastrophic
                 import traceback
                 traceback.print_exc()
 
+            dest_info.append((card_id, qt_metadata)) #pass the calibre metadata (mdata) as a backup, should not be used though.
             self.report_progress((i+1) / float(len(files)), _('Transferring books to device...'))
 
         self.report_progress(1.0, _('Transferring books to device...'))
@@ -884,6 +886,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger().debug(sys._getframe().f_code.co_name)
         logger().debug("LIBRARY INFO CHANGED",library_name, library_uuid, field_metadata)
         self.current_library_uuid = library_uuid
+        self.is_connected = False
         pass
 
         # Dynamic control interface.
@@ -1066,8 +1069,10 @@ class QuietthymeDevicePlugin(DevicePlugin):
                           local_metadata):
         #TODO: using the return value of the uploaded book (the book ID) we should upload the cover to QuietThyme storage
         # so that the cover is always available.
-        qt_book_data = ApiClient(logger()).set_book_cover(qt_metadata['id'],local_metadata['cover'])
-        return qt_book_data['image']
+        qt_cover_base, qt_cover_ext = os.path.splitext(local_metadata.get('cover'))
+        qt_cover_filename = 'cover' + qt_cover_ext
+        qt_book_data = ApiClient(logger()).set_book_cover(qt_metadata['objectId'],local_metadata.get('cover'),qt_cover_filename)
+        return qt_book_data
 
 
     ####################################################################################################################
