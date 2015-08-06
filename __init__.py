@@ -69,7 +69,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         self.gui_name = 'QuietThyme Gui Name'
         self.is_connected = False
         self.is_ejected = False
-
+        self.current_library_uuid = None
 
         #quietthyme server cache
         self.qt_settings = {}
@@ -881,6 +881,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         #TODO: Library info changed, relogin/get a new token.
         logger().debug(sys._getframe().f_code.co_name)
         logger().debug("LIBRARY INFO CHANGED",library_name, library_uuid, field_metadata)
+        self.current_library_uuid = library_uuid
         pass
 
         # Dynamic control interface.

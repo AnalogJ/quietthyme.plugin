@@ -24,8 +24,8 @@ prefs = JSONConfig('plugins/quietthyme')
 prefs.defaults['debug_mode'] = True
 # determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
-#prefs.defaults['api_base'] = 'localhost:1337'
-prefs.defaults['api_base'] = 'build.quietthyme.com'
+prefs.defaults['api_base'] = 'localhost:1337'
+#prefs.defaults['api_base'] = 'build.quietthyme.com'
 #prefs.defaults['api_base'] = 'http://192.150.23.196:1337/'
 # (String) the access token used to communicate with the quietthyme API
 # TODO: this should be None when deployed.
@@ -118,6 +118,7 @@ class QTWebPage(QWebPage):
         #origin = QWebSecurityOrigin(request.url())
         origin = frame.securityOrigin()
         print("Security Origin: %s " % origin.host())
+        #TODO: make this whitelisting dynamic after the page first loads (all subsequent requests should automatically be whitelisted)
         origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
         origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
         origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
@@ -143,7 +144,7 @@ class QTWebView(QWebView):
         self.nam = QTNetworkManager(bearer_token)
         page.setNetworkAccessManager(self.nam)
         self.setPage(page)
-
+        #TODO: if token is invalid, show a landing page.
         # self.urlChanged.connect(self._url_changed)
 
     ################################################################################################################

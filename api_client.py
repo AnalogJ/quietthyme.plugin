@@ -28,8 +28,10 @@ class ApiClient():
         :return: quietthyme jwt.
         '''
         self.logger.debug(sys._getframe().f_code.co_name)
-        query_args = {'library_uuid': library_uuid,
-                      'library_name': library_name}
+
+        if not library_uuid:
+            return {'success':False, 'error_msg':'No library uuid found'}
+        query_args = {'library_uuid': library_uuid}
 
         response = self._make_json_request('GET', '/api/auth/calibre', query_args=query_args)
         self.logger.debug(response)
@@ -108,10 +110,10 @@ class ApiClient():
         json_data = json.dumps(qt_metadata, sort_keys=True,indent=4, separators=(',', ': '))
         self.logger.debug(json_data)
 
-        response = self._make_json_request('POST', '/book', json_data=json_data, query_args={'source': 'calibre'})
-        self.logger.debug(response['id'])
+        response = self._make_json_request('POST', '/api/book', json_data=json_data, query_args={'source': 'calibre'})
+        self.logger.debug(response['data']['id'])
 
-        qt_metadata['id'] = response['id']
+        qt_metadata['id'] = response['data']['id']
         return qt_metadata
         # resp = self._make_json_request(QNetworkAccessManager.PostOperation, "/book", json_data=json_data)
         # resp.error.connect(self.handleError)
@@ -143,7 +145,7 @@ class ApiClient():
 
         qt_filename_base, qt_filename_ext = os.path.splitext(qt_filename)
         self.logger.debug(qt_filename_base,qt_filename_ext)
-        response = self._make_upload_file_request("/storage",
+        response = self._make_upload_file_request("/api/storage",
                                                   {"book_id": qt_book_id,
                                                    "storage_type": storage_type,
                                                    "file_name": qt_filename_base,
