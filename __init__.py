@@ -1035,7 +1035,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         #TODO: this bookstorage uploader is a bit flimsy
         qt_filename = self._create_upload_path('',local_metadata, local_filepath)
-        qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["id"],
+        qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["objectId"],
                                                       storage_type,
                                                       local_filepath,
                                                       qt_filename,

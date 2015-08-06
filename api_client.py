@@ -111,9 +111,9 @@ class ApiClient():
         self.logger.debug(json_data)
 
         response = self._make_json_request('POST', '/api/book', json_data=json_data, query_args={'source': 'calibre'})
-        self.logger.debug(response['data']['objectId'])
+        self.logger.debug(response['data']['id'])
 
-        qt_metadata['objectId'] = response['data']['objectId']
+        qt_metadata['objectId'] = response['data']['id']
         return qt_metadata
         # resp = self._make_json_request(QNetworkAccessManager.PostOperation, "/book", json_data=json_data)
         # resp.error.connect(self.handleError)

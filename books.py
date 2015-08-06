@@ -41,7 +41,7 @@ class Book(Metadata):
         book.quietthyme_id = qt_metadata['objectId']
         book.path = qt_metadata['storage_type'] + '://' + \
                     qt_metadata['objectId'] + '/' + \
-                    qt_metadata['file_name'] + '.' + qt_metadata['storage_format']
+                    qt_metadata['storage_file_name'] + '.' + qt_metadata['storage_format']
         book.thumbnail = None
         book.tags = qt_metadata['tags']
 
@@ -49,11 +49,11 @@ class Book(Metadata):
 
         #populate identifiers
         book.identifiers['isbn'] = qt_metadata.get('isbn', qt_metadata.get('isbn',None))
-        if qt_metadata['amazon_id']:
+        if 'amazon_id' in qt_metadata:
             book.identifiers['amazon'] = qt_metadata['amazon_id']
-        if qt_metadata['google_id']:
+        if 'google_id' in qt_metadata:
             book.identifiers['google'] = qt_metadata['google_id']
-        if qt_metadata['goodreads_id']:
+        if 'goodreads_id' in qt_metadata:
             book.identifiers['goodreads'] = qt_metadata['goodreads_id']
 
         book.rating = qt_metadata.get('average_rating', None)
