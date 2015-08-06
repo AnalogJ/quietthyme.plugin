@@ -233,7 +233,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                 return None
         elif self.is_connected:
             #the device is already connected, skip so that open is not called repeatedly.
-            return None
+            return True
         else:
             #the device has been ejected, or is no longer connected.
             return None
@@ -527,7 +527,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         card_id = self._convert_oncard_to_cardid(oncard)
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
         if storage_type is not None:
-            qt_booklist = ApiClient(logger()).books(storage_type)
+            qt_booklist = ApiClient(logger()).books(storage_type)['data']
         else:
             qt_booklist = []
 

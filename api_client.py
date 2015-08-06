@@ -137,7 +137,7 @@ class ApiClient():
 
         response = self._make_json_request('GET', '/api/book', query_args={'storage_type': storage_type})
         self.logger.debug(response)
-        return response['data']
+        return response
 
 
     def create_bookstorage(self, qt_book_id, storage_type, local_filepath, qt_filename, replace_file=False):
