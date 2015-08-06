@@ -7,7 +7,9 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
-    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray
+    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
+    QSslSocket, QSslCertificate
+
 from calibre.utils.config import JSONConfig
 
 # This is where all preferences for this plugin will be stored
@@ -36,7 +38,10 @@ class ConfigWidget(QWidget):
         self.l = QVBoxLayout()
         self.setLayout(self.l)
 
-        self.config_url = QUrl.fromEncoded('http://'+prefs['api_base']+'/link/start')
+        self.config_url = QUrl.fromEncoded('https://'+prefs['api_base']+'/link/start')
+        #if prefs['api_base'].startswith('localhost'):
+        #    self.config_url.setScheme('http')
+
 
         #self.config_url = QUrl.fromEncoded('https://www.dropbox.com/login')
         #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin')
@@ -122,7 +127,10 @@ class QTWebPage(QWebPage):
         origin.addAccessWhitelistEntry("https", "cf.dropboxstatic.com", QWebSecurityOrigin.AllowSubdomains)
         origin.addAccessWhitelistEntry("https", "fonts.gstatic.com", QWebSecurityOrigin.AllowSubdomains)
         origin.addAccessWhitelistEntry("https", "ajax.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry(request.url().scheme(), request.url().host(), QWebSecurityOrigin.AllowSubdomains)
+        origin.addAccessWhitelistEntry("https", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
+        origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
+        origin.addAccessWhitelistEntry("http", 'build.quietthyme.com', QWebSecurityOrigin.AllowSubdomains)
+        origin.addAccessWhitelistEntry("https", 'build.quietthyme.com', QWebSecurityOrigin.AllowSubdomains)
         #frame.securityOrigin().allOrigins().append(origin)
 
         return True
@@ -131,9 +139,10 @@ class QTWebView(QWebView):
 
     def __init__(self, parent=None, bearer_token=None):
         super(QWebView,self).__init__(parent)
-        self.setPage(QTWebPage())
+        page = QTWebPage()
         self.nam = QTNetworkManager(bearer_token)
-        self.page().setNetworkAccessManager(self.nam)
+        page.setNetworkAccessManager(self.nam)
+        self.setPage(page)
 
         # self.urlChanged.connect(self._url_changed)
 
@@ -169,13 +178,20 @@ class QTNetworkManager(QNetworkAccessManager):
 
     def createRequest(self, operation, request, data):
         request_host = request.url().host()
+        request_path = request.url().path()
         quietthyme_host = QUrl.fromEncoded('http://' + prefs['api_base']).host()
 
-        if self.bearer_token and (quietthyme_host == request_host):
+        if self.bearer_token and (quietthyme_host == request_host) and (request_path.startswith('/link/connect')):
             print("Adding QT Auth header: %s", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
+        if quietthyme_host == request_host:
+            #TODO Huge hack. only because QT5 cant seeem to consistently communicate over SSL when using sni. ie cloudflare.
+            url = request.url()
+            url.setScheme('http')
+            request.setUrl(url)
 
+        print("Requesting: %s" % request.url())
         reply = QNetworkAccessManager.createRequest(self,operation, request, data)
         return reply
     #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
@@ -224,9 +240,14 @@ class QTNetworkManager(QNetworkAccessManager):
 #         self.original_reply.finished.connect(self.finished)
 #         self.original_reply.uploadProgress.connect(self.uploadProgress)
 #         self.original_reply.downloadProgress.connect(self.downloadProgress)
+#         self.original_reply.sslErrors.connect(self.sslErrors)
 #
 #
-#         print('====ORGINAL OPERATION: %s - %s' % (operation, original_reply.url()))
+#     def sslErrors(self,errors):
+#         print('===========QT REPLY ERRORS')
+#         for error in errors:
+#             print(error.errorString())
+#         self.ignoreSslErrors()
 #
 #     def __getattribute__(self, attr):
 #         """Send undefined methods straight through to proxied reply
