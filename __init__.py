@@ -11,7 +11,8 @@ import traceback, os, urllib2, sys
 from calibre_plugins.quietthyme.config import prefs
 
 # The file that contains the Book and Booklist classes
-from calibre_plugins.quietthyme.books import Book, BookList
+from calibre_plugins.quietthyme.models.book import Book
+from calibre_plugins.quietthyme.models.booklist import BookList
 
 #Quietthyme api client.
 from calibre_plugins.quietthyme.api_client import ApiClient
