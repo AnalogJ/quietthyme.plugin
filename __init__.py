@@ -239,6 +239,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                 # Attempt to open a new connection to the "device"
                 return True
             except urllib2.URLError:
+                logger.warn('Not connected to the internet, cannot open Quietthyme plugin')
                 return None
         elif self.is_connected:
             #the device is already connected, skip so that open is not called repeatedly.
@@ -332,20 +333,12 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         '''
         logger.debug(sys._getframe().f_code.co_name)
-        print("LIBRARY INFO CHANGED")
 
         # At this point we know that the user has a valid network connection.
-        # check if there is an access token
-        #if not prefs['access_token']:
-           # if there is no access_token set, the user hasn't logged in. We can't do anything.
-        #   raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
+        # if not prefs['token']:
+        #    # if there is no access_token set, the user hasn't logged in. We can't do anything.
+        #    raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
         response = ApiClient().auth(library_uuid, current_library_name())
-
-        #TODO: ensure the access token hasn't expired
-        #TODO: make a connection to Quietthyme to download the user's settings
-            #TODO: import json
-            #TODO: download file from quietthyme using access_token and parse using json library.
-        #TODO: ensure that the calibre library uuid is the same as stored in quietthyme (server won't be able to handle multiple calibre libraries)
 
         #if everything is successful set is_connected to true.
         if not response['success']:
@@ -408,7 +401,6 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         """
         logger.debug(sys._getframe().f_code.co_name)
-        #TODO: this will be dynamically stored, rather than hardcoded
 
         self.report_progress(1.0, 'Get device information...')
         return (self.qt_settings.get('device_name', 'QuietThyme'),
@@ -537,7 +529,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger.debug(sys._getframe().f_code.co_name)
         card_id = self._convert_oncard_to_cardid(oncard)
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
-        if storage_type is not None:
+        if (storage_type is not None) and (storage_type != 'quietthyme'):
             qt_booklist = ApiClient().books(storage_type)['data']
         else:
             qt_booklist = []
@@ -575,16 +567,11 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger.debug(files, names, on_card, metadata[0].__unicode__())
 
         card_id = self._convert_oncard_to_cardid(on_card)
-
-
         dest_info = []
         names = iter(names)
         metadata = iter(metadata)
         for i, local_filepath in enumerate(files):
             local_metadata, fname = metadata.next(), names.next()
-            #TODO: generating this filepath here doesnt seem to make sense,
-            #TODO: each storage_type has different rules anyways, we shouldnt use filepath as an identifier.
-            #qt_filepath = self._create_upload_path(self.qt_settings[card_id].get('prefix'),local_metadata, fname)
 
             qt_metadata = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_type','quietthyme'), local_metadata,  replace_file=True)
             try:
@@ -593,11 +580,12 @@ class QuietthymeDevicePlugin(DevicePlugin):
                     # dest_info['image'] = self._upload_cover(qt_metadata,local_metadata)
                     qt_metadata = self._upload_cover(qt_metadata,local_metadata)
 
-            except:  # Failure to upload cover is not catastrophic
-                import traceback
-                traceback.print_exc()
+            except Exception as inst:  # Failure to upload cover is not catastrophic
+                # import traceback
+                # traceback.print_exc()
+                logger.error('could not upload cover %s' % inst)
 
-            dest_info.append((card_id, qt_metadata)) #pass the calibre metadata (mdata) as a backup, should not be used though.
+            dest_info.append((card_id, qt_metadata)) #pass the calibre metadata (mdata) as a backup, should not be used though...
             self.report_progress((i+1) / float(len(files)), _('Transferring books to device...'))
 
         self.report_progress(1.0, _('Transferring books to device...'))
@@ -707,7 +695,6 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         self.report_progress(1.0, _('Sending metadata to device...'))
         logger.debug('finished sync_booklists')
-
 
     def get_file(self, path, outfile, end_session=True):
         '''

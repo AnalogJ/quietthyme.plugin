@@ -22,7 +22,7 @@ prefs = JSONConfig('plugins/quietthyme')
 
 # Set defaults
 # determines if the plugin logger is enabled.
-prefs.defaults['debug_mode'] = False
+prefs.defaults['debug_mode'] = True
 # determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
 prefs.defaults['api_base'] = 'localhost:1337'
