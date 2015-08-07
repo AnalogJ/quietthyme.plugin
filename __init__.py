@@ -646,7 +646,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         for i, qt_storage_id in enumerate(paths):
             self.report_progress((i+1) / float(len(paths)), _('Deleting books from QuietThyme...'))
             logger().debug(qt_storage_id)
-            ApiClient(logger()).destroy_bookstorage(qt_storage_id)
+            ApiClient(logger()).destroy_book(qt_storage_id)
         self.report_progress(1.0, _('Removing books from QuietThyme...'))
 
     def remove_books_from_metadata(self, paths, booklists):

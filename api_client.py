@@ -67,7 +67,7 @@ class ApiClient():
             'publisher': local_metadata.publisher,
             'published_date': local_metadata.pubdate.utcnow().isoformat("T") + "Z",
             'tags': local_metadata.tags,
-            'authors': [{'name': author} for author in local_metadata.authors],
+            'authors': local_metadata.authors,
             'last_modified': local_metadata.last_modified.utcnow().isoformat("T") + "Z",
 
             #additional data, not used by qt yet. These field names will change.
@@ -159,14 +159,14 @@ class ApiClient():
         self.logger.debug(response)
         return response
 
-    def destroy_bookstorage(self, calibre_storage_path):
+    def destroy_book(self, calibre_storage_path):
         self.logger.debug(sys._getframe().f_code.co_name)
 
         import re
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        response = self._make_json_request('DELETE', '/storage/' + parsed_data['id'])
+        response = self._make_json_request('DELETE', '/api/book/' + parsed_data['book_id'])
         self.logger.debug(response)
         return response
 
@@ -176,7 +176,7 @@ class ApiClient():
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        return self._make_json_request('GET', '/storage/' + parsed_data['book_id'] + '/download', json_response=False)
+        return self._make_json_request('GET', '/api/storage/' + parsed_data['book_id'], json_response=False)
 
     def _make_json_request(self, action, endpoint='/', query_args={}, json_data='', json_response=True):
         self.logger.debug(sys._getframe().f_code.co_name)

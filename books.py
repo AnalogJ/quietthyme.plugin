@@ -35,7 +35,7 @@ class Book(Metadata):
         book.authors = []
         #authors
         for author in qt_metadata['authors']:
-            book.authors.append(author['name'])
+            book.authors.append(author)
         book.size = qt_metadata['storage_size']
         #book.datetime = qt_metadata[]
         book.quietthyme_id = qt_metadata['objectId']
