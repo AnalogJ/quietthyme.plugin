@@ -1,3 +1,6 @@
+__license__   = 'GPL v3'
+__copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
+__docformat__ = 'restructuredtext en'
 
 from calibre.devices.interface import BookList as _BookList
 class BookList(_BookList):

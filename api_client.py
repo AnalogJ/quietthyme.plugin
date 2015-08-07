@@ -1,3 +1,7 @@
+__license__   = 'GPL v3'
+__copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
+__docformat__ = 'restructuredtext en'
+
 from calibre_plugins.quietthyme.config import prefs
 import sys
 import io
@@ -11,15 +15,16 @@ import urllib2
 import urlparse
 import httplib
 import socket
+import logging
 
 # from PyQt5.Qt import (QNetworkAccessManager,QNetworkReply, QNetworkRequest, QUrl, QByteArray)
 # from PyQt5.QtCore import QIODevice, QBuffer, QByteArray
 
 class ApiClient():
-    def __init__(self, logger):
+    def __init__(self):
         self.api_base = "http://" +  prefs['api_base']
         #self.network_manager = QNetworkAccessManager()
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
 
     def auth(self, library_uuid, library_name):
         '''

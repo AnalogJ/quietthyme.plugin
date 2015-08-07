@@ -6,14 +6,13 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
-import traceback, os, urllib2, sys
+import traceback, os, urllib2, sys, logging
+
 # The class that sets and stores the user configured preferences
 from calibre_plugins.quietthyme.config import prefs
-
 # The file that contains the Book and Booklist classes
 from calibre_plugins.quietthyme.models.book import Book
 from calibre_plugins.quietthyme.models.booklist import BookList
-
 #Quietthyme api client.
 from calibre_plugins.quietthyme.api_client import ApiClient
 
@@ -28,19 +27,28 @@ from calibre.devices.interface import DevicePlugin
 # Used to get the current library name.
 from calibre.library import current_library_name
 
-_log = None
-def logger():
-    global _log
-    if _log is None:
-        from calibre.utils.logging import ThreadSafeLog, FileStream
-        #_log = ThreadSafeLog()
-        _log = ThreadSafeLog(level=ThreadSafeLog.DEBUG)
+#configure logger
+logger = logging.getLogger(__name__)
+logger.propagate = False
+logger.setLevel(logging.WARN)
 
-        #lf = os.path.join(tdir, tdir_name.replace(' ', '')+'_identify_test.txt')
-        #log = create_log()
-        _log.outputs = [FileStream(open('/tmp/plugin.calibre.log', 'w+'))]
+ch = logging.StreamHandler()
+ch.setLevel(logging.WARN)
+# create formatter
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+ch.setFormatter(formatter)
 
-    return _log
+if prefs['debug_mode']:
+    logger.setLevel(logging.DEBUG)
+    ch.setLevel(logging.DEBUG)
+    #add log to file channel.
+    fh = logging.FileHandler('/tmp/plugin.quietthyme.calibre.log', 'w')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+# add ch to logger
+logger.addHandler(ch)
+
 
 class QuietthymeDevicePlugin(DevicePlugin):
     '''
@@ -61,7 +69,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     gui_name = 'QuietThyme Storage'
 
     def __init__(self, *args, **kwargs):
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         DevicePlugin.__init__(self, *args, **kwargs)
         self.progress_reporter = None
         self.current_friendly_name = None
@@ -76,7 +84,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         self.qt_settings = {}
 
     def is_customizable(self):
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return True
 
     """
@@ -198,7 +206,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         :param devices_on_system: List of devices currently connected
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         #TODO: no device_info sent. what does that acutally look like.
         return False
 
@@ -222,7 +230,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                               repeated scanning, the cache must be flushed.
 
         '''
-        #logger().debug(sys._getframe().f_code.co_name)
+        #logger.debug(sys._getframe().f_code.co_name)
         if (not self.is_connected) and (not self.is_ejected):
             # check if the user is connected to the internet.
             try:
@@ -249,7 +257,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         Should return True if a device was detected and successfully opened,
         otherwise False.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return True
 
         # }}}
@@ -266,7 +274,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         :param detected_device: Device information from the device scanner
 
         """
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def can_handle_windows(self, device_id, debug=False):
@@ -282,7 +290,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                             ``(vendor_id, product_id, bcd)``.
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return True
 
     def can_handle(self, device_info, debug=False):
@@ -293,7 +301,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                             serial number)
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         return True
 
@@ -323,7 +331,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
             line).
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         print("LIBRARY INFO CHANGED")
 
         # At this point we know that the user has a valid network connection.
@@ -331,7 +339,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         #if not prefs['access_token']:
            # if there is no access_token set, the user hasn't logged in. We can't do anything.
         #   raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
-        response = ApiClient(logger()).auth(library_uuid, current_library_name())
+        response = ApiClient().auth(library_uuid, current_library_name())
 
         #TODO: ensure the access token hasn't expired
         #TODO: make a connection to Quietthyme to download the user's settings
@@ -346,7 +354,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
             prefs['token'] = response['data']['token']
         self.is_connected = response['success']
 
-        status_response = ApiClient(logger()).status(library_uuid, current_library_name())
+        status_response = ApiClient().status(library_uuid, current_library_name())
         if not status_response['success']:
             raise OpenFeedback(status_response['error_msg'])
 
@@ -366,7 +374,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         NOTE: That this method may not be called on the same thread as the rest
         of the device methods.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         self.is_connected = False
         self.is_ejected = True
 
@@ -374,7 +382,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         '''
         Called if the user yanks the device without ejecting it first.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         raise NotImplementedError()
 
     def set_progress_reporter(self, report_progress):
@@ -387,7 +395,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                                 task does not have any progress information
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         self.report_progress = report_progress
 
     def get_device_information(self, end_session=True):
@@ -399,7 +407,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                  drive information dictionary. See usbms.driver for an example.
 
         """
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         #TODO: this will be dynamically stored, rather than hardcoded
 
         self.report_progress(1.0, 'Get device information...')
@@ -456,7 +464,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         #         if sid is None: continue
         #         self._update_drive_info(self.filesystem_cache.storage(sid), location_code)
         # return self.driveinfo
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         raise NotImplementedError()
 
 
@@ -471,7 +479,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         (None, None)
         '''
         # return  (self._carda_id, self._cardb_id)
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         return (self.qt_settings.get('A',{}).get('prefix',None), self.qt_settings.get('B',{}).get('prefix',None))
 
@@ -486,7 +494,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                  particular device doesn't have any of these locations it should return 0.
 
         """
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         return [
             self.qt_settings.get('main',{}).get('total_space',0),
@@ -505,7 +513,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                  particular device doesn't have any of these locations it should return -1.
 
         """
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         return [
             self.qt_settings.get('main',{}).get('free_space',-1),
@@ -526,18 +534,18 @@ class QuietthymeDevicePlugin(DevicePlugin):
         :return: A BookList.
 
         """
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         card_id = self._convert_oncard_to_cardid(oncard)
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
         if storage_type is not None:
-            qt_booklist = ApiClient(logger()).books(storage_type)['data']
+            qt_booklist = ApiClient().books(storage_type)['data']
         else:
             qt_booklist = []
 
         booklist = BookList(None, None, None)
         for qt_metadata in qt_booklist:
             if qt_metadata['storage_identifier']:
-                logger().debug(qt_metadata)
+                logger.debug(qt_metadata)
                 booklist.add_book(Book.from_quietthyme_metadata(qt_metadata), False)
         return booklist
 
@@ -563,8 +571,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
         :return: A list of 3-element tuples. The list is meant to be passed
                  to :meth:`add_books_to_metadata`.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
-        logger().debug(files, names, on_card, metadata[0].__unicode__())
+        logger.debug(sys._getframe().f_code.co_name)
+        logger.debug(files, names, on_card, metadata[0].__unicode__())
 
         card_id = self._convert_oncard_to_cardid(on_card)
 
@@ -593,8 +601,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
             self.report_progress((i+1) / float(len(files)), _('Transferring books to device...'))
 
         self.report_progress(1.0, _('Transferring books to device...'))
-        logger().debug('finished uploading %d books'%(len(files)))
-        logger().debug(dest_info)
+        logger.debug('finished uploading %d books'%(len(files)))
+        logger.debug(dest_info)
         return dest_info
 
     def add_books_to_metadata(self, dest_info, metadata, booklists):
@@ -611,8 +619,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
                           :meth`books(oncard='cardb')`).
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
-        logger().debug('USBMS: adding metadata for %d books'%(len(metadata)))
+        logger.debug(sys._getframe().f_code.co_name)
+        logger.debug('USBMS: adding metadata for %d books'%(len(metadata)))
 
         metadata = iter(metadata)
         for i, location in enumerate(dest_info):
@@ -624,17 +632,17 @@ class QuietthymeDevicePlugin(DevicePlugin):
                 book = Book.from_quietthyme_metadata(location[1])
             except StandardError, e:
 
-                logger().debug('An error occured while adding book via QT data, using calibre data')
-                logger().debug(str(e))
+                logger.debug('An error occured while adding book via QT data, using calibre data')
+                logger.debug(str(e))
                 import traceback
-                logger().debug(traceback.format_exc())
+                logger.debug(traceback.format_exc())
                 book = Book.from_calibre_metadata(local_metadata)
 
             b = booklists[blist].add_book(book, replace_metadata=True)
             if b:
                 b._new_book = True
         self.report_progress(1.0, _('Adding books to device metadata listing...'))
-        logger().debug('finished adding metadata')
+        logger.debug('finished adding metadata')
 
 
     def delete_books(self, paths, end_session=True):
@@ -642,12 +650,12 @@ class QuietthymeDevicePlugin(DevicePlugin):
         Delete books at paths on device.
         '''
         from urlparse import urlparse
-        logger().debug(sys._getframe().f_code.co_name)
-        logger().debug(paths)
+        logger.debug(sys._getframe().f_code.co_name)
+        logger.debug(paths)
         for i, qt_storage_id in enumerate(paths):
             self.report_progress((i+1) / float(len(paths)), _('Deleting books from QuietThyme...'))
-            logger().debug(qt_storage_id)
-            ApiClient(logger()).destroy_book(qt_storage_id)
+            logger.debug(qt_storage_id)
+            ApiClient().destroy_book(qt_storage_id)
         self.report_progress(1.0, _('Removing books from QuietThyme...'))
 
     def remove_books_from_metadata(self, paths, booklists):
@@ -662,7 +670,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                           :meth`books(oncard='cardb')`).
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         for i, path in enumerate(paths):
             self.report_progress((i+1) / float(len(paths)), _('Removing books from Calibre metadata cache...'))
             for bl in booklists:
@@ -686,7 +694,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         #TODO: our metadata has already been synced, when the book was uploaded, it pushed the metadata up
         #TODO: unless this method is more generic, and is called in other places, then we will have to iterate over the
         #TODO: booklists and do a ton of api requests :(
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         #TODO: use the quietthyme api to push metadata up
 
@@ -698,7 +706,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
                     book._new_book = False
 
         self.report_progress(1.0, _('Sending metadata to device...'))
-        logger().debug('finished sync_booklists')
+        logger.debug('finished sync_booklists')
 
 
     def get_file(self, path, outfile, end_session=True):
@@ -709,8 +717,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
                        :func:`open` call.
 
         '''
-        logger().debug(sys._getframe().f_code.co_name)
-        outfile.write(ApiClient(logger()).download_bookstorage(path))
+        logger.debug(sys._getframe().f_code.co_name)
+        outfile.write(ApiClient().download_bookstorage(path))
 
 
 
@@ -753,7 +761,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         attribute `format_map` which is an ordered list of formats for the
         device.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
 
         class Settings():
             def __init__(self, format_map=[]):
@@ -788,7 +796,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         Non-disk devices should implement this method based on the location
         codes returned by the get_device_information() method.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         sid = {'main':self._main_id, 'A':self._carda_id,
                'B':self._cardb_id}.get(location_code, None)
         if sid is None:
@@ -805,7 +813,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         position in the returned list for that book should be a three tuple:
         (original_path, the exception instance, traceback)
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return paths
 
     def startup(self):
@@ -816,7 +824,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         will have this method called. This method is called on the device
         thread, not the GUI thread.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
 
@@ -826,7 +834,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         to restart. Do any cleanup required. This method is called on the
         device thread, not the GUI thread.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def get_device_uid(self):
@@ -835,7 +843,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         called immediately after a successful call to open()). You must
         implement this method if you set ASK_TO_ALLOW_CONNECT = True
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         raise NotImplementedError()
 
     def ignore_connected_device(self, uid):
@@ -846,7 +854,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         immediately after open(), so if open() caches some state, the driver
         should reset that state.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         raise NotImplementedError()
 
     def get_user_blacklisted_devices(self):
@@ -854,14 +862,14 @@ class QuietthymeDevicePlugin(DevicePlugin):
         Return map of device uid to friendly name for all devices that the user
         has asked to be ignored.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return {}
 
     def set_user_blacklisted_devices(self, devices):
         '''
         Set the list of device uids that should be ignored by this driver.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def specialize_global_preferences(self, device_prefs):
@@ -874,7 +882,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         Currently used for:
         metadata management (prefs['manage_device_metadata'])
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         device_prefs.set_overrides()
 
     def set_library_info(self, library_name, library_uuid, field_metadata):
@@ -884,8 +892,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
         changes while connected.
         '''
         #TODO: Library info changed, relogin/get a new token.
-        logger().debug(sys._getframe().f_code.co_name)
-        logger().debug("LIBRARY INFO CHANGED",library_name, library_uuid, field_metadata)
+        logger.debug(sys._getframe().f_code.co_name)
+        logger.debug("LIBRARY INFO CHANGED",library_name, library_uuid, field_metadata)
         self.current_library_uuid = library_uuid
         self.is_connected = False
         pass
@@ -905,7 +913,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         #TODO: use this method to create a customized UI.
         return None
 
@@ -918,7 +926,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def stop_plugin(self):
@@ -931,7 +939,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def get_option(self, opt_string, default=None):
@@ -943,7 +951,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return default
 
     def set_option(self, opt_string, opt_value):
@@ -954,7 +962,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         pass
 
     def is_running(self):
@@ -1001,7 +1009,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         book_metadata: the Metadata object for the book coming from the device.
         first_call: True if this is the first call during a sync, False otherwise
         '''
-        logger().debug(sys._getframe().f_code.co_name)
+        logger.debug(sys._getframe().f_code.co_name)
         return (None, (None, False))
 
     ####################################################################################################################
@@ -1035,11 +1043,11 @@ class QuietthymeDevicePlugin(DevicePlugin):
     def _upload_book(self, local_filepath, storage_type, local_metadata, replace_file=True):
         #TODO: upload the file and metadata to quietthyme. Determine if a new book should be created or replaced.
 
-        qt_book_data = ApiClient(logger()).create_book(local_metadata)
+        qt_book_data = ApiClient().create_book(local_metadata)
 
         #TODO: this bookstorage uploader is a bit flimsy
         qt_filename = self._create_upload_path('',local_metadata, local_filepath)
-        qt_bookstorage_data = ApiClient(logger()).create_bookstorage(qt_book_data["objectId"],
+        qt_bookstorage_data = ApiClient().create_bookstorage(qt_book_data["objectId"],
                                                       storage_type,
                                                       local_filepath,
                                                       qt_filename,
@@ -1072,7 +1080,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         # so that the cover is always available.
         qt_cover_base, qt_cover_ext = os.path.splitext(local_metadata.get('cover'))
         qt_cover_filename = 'cover' + qt_cover_ext
-        qt_book_data = ApiClient(logger()).set_book_cover(qt_metadata['objectId'],local_metadata.get('cover'),qt_cover_filename)
+        qt_book_data = ApiClient().set_book_cover(qt_metadata['objectId'],local_metadata.get('cover'),qt_cover_filename)
         return qt_book_data
 
 

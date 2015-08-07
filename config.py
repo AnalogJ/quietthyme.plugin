@@ -6,6 +6,7 @@ from __future__ import (unicode_literals, division, absolute_import,
 __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
+
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
     QSslSocket, QSslCertificate
@@ -21,7 +22,7 @@ prefs = JSONConfig('plugins/quietthyme')
 
 # Set defaults
 # determines if the plugin logger is enabled.
-prefs.defaults['debug_mode'] = True
+prefs.defaults['debug_mode'] = False
 # determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
 prefs.defaults['api_base'] = 'localhost:1337'
