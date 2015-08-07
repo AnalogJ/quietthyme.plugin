@@ -14,7 +14,7 @@ from calibre_plugins.quietthyme.config import prefs
 from calibre_plugins.quietthyme.models.book import Book
 from calibre_plugins.quietthyme.models.booklist import BookList
 #Quietthyme api client.
-from calibre_plugins.quietthyme.api_client import ApiClient
+from calibre_plugins.quietthyme.client.api import ApiClient
 
 # The device error classes.
 from calibre.devices.errors import OpenFeedback,OpenFailed
