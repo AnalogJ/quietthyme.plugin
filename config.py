@@ -9,7 +9,7 @@ __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy
 
 from calibre.utils.config import JSONConfig
 
@@ -22,7 +22,7 @@ prefs = JSONConfig('plugins/quietthyme')
 
 # Set defaults
 # determines if the plugin logger is enabled.
-prefs.defaults['debug_mode'] = True
+prefs.defaults['debug_mode'] = False
 # determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
 prefs.defaults['api_base'] = 'localhost:1337'
@@ -39,11 +39,12 @@ class ConfigWidget(QWidget):
         self.l = QVBoxLayout()
         self.setLayout(self.l)
 
+        #add checkbox
+        self.debug_checkbox = QCheckBox('Debug Mode')
+        self.debug_checkbox.setChecked(prefs['debug_mode'])
+        self.l.addWidget(self.debug_checkbox)
+
         self.config_url = QUrl.fromEncoded('https://'+prefs['api_base']+'/link/start')
-        #if prefs['api_base'].startswith('localhost'):
-        #    self.config_url.setScheme('http')
-
-
         #self.config_url = QUrl.fromEncoded('https://www.dropbox.com/login')
         #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin')
         #self.config_url = QUrl.fromEncoded('http://www.google.com')
@@ -68,9 +69,15 @@ class ConfigWidget(QWidget):
         self.webview.show()
         self.l.addWidget(self.webview)
 
+
+
+
+
         if prefs['debug_mode']:
             self.inspector = QWebInspector()
             self.inspector.setMinimumSize(QSize(600, 300))
+            self.inspector.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
+
             self.l.addWidget(self.inspector)
             self.inspector.setPage(self.webview.page())
 
@@ -94,10 +101,10 @@ class ConfigWidget(QWidget):
     #         # prefs['token'] = token
 
     def save_settings(self):
-        prefs['test'] = unicode('test') #unicode(self.msg.text())
+        prefs['debug_mode'] = self.debug_checkbox.isChecked()
 
     def validate(self):
-        return self.webview.page().mainFrame().url() == self.config_url
+        return True #self.webview.page().mainFrame().url() == self.config_url
 
 class QTWebPage(QWebPage):
     """ Settings for the browser."""
@@ -183,7 +190,7 @@ class QTNetworkManager(QNetworkAccessManager):
         request_path = request.url().path()
         quietthyme_host = QUrl.fromEncoded('http://' + prefs['api_base']).host()
 
-        if self.bearer_token and (quietthyme_host == request_host) and (request_path.startswith('/link/connect')):
+        if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             print("Adding QT Auth header: %s", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
