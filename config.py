@@ -44,7 +44,7 @@ class ConfigWidget(QWidget):
         self.debug_checkbox.setChecked(prefs['debug_mode'])
         self.l.addWidget(self.debug_checkbox)
 
-        self.config_url = QUrl.fromEncoded('https://'+prefs['api_base']+'/link/start')
+        self.config_url = QUrl('https://'+prefs['api_base']+'/link/start')
         #self.config_url = QUrl.fromEncoded('https://www.dropbox.com/login')
         #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin')
         #self.config_url = QUrl.fromEncoded('http://www.google.com')
@@ -188,7 +188,7 @@ class QTNetworkManager(QNetworkAccessManager):
     def createRequest(self, operation, request, data):
         request_host = request.url().host()
         request_path = request.url().path()
-        quietthyme_host = QUrl.fromEncoded('http://' + prefs['api_base']).host()
+        quietthyme_host = QUrl('http://' + prefs['api_base']).host()
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             print("Adding QT Auth header: %s", request.url())
