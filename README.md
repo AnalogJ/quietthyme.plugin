@@ -6,6 +6,9 @@ on linux, calibre configuration is located in
 ~/.config/calibre/plugins/*
 
 
+CLI command 
+calibre-debug -r "QuietThyme Device Plugin"
+
 #important urls
 http://manual.calibre-ebook.com/plugins.html#module-calibre.devices.interface
 http://manual.calibre-ebook.com/plugins.html#calibre.devices.usbms.driver.USBMS

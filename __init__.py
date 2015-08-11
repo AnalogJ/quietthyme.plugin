@@ -198,6 +198,16 @@ class QuietthymeDevicePlugin(DevicePlugin):
     #: so only set it when you really need to.
     user_feedback_after_callback = None
 
+    def cli_main(self, argv):
+        '''
+        This method is the main entry point for your plugins command line interface. It is called when the user does:
+        calibre-debug -r “Plugin Name”. Any arguments passed are present in the args variable.
+        :param args:
+        :return:
+        '''
+        from calibre_plugins.quietthyme.cli import main as cli_main
+        cli_main(argv[1:],usage='%prog --run-plugin "'+self.name+'" --')
+
     def is_usb_connected(self, devices_on_system, debug=False,
                                    only_presence=False):
         '''
@@ -731,6 +741,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
         # top of the module as importing the config class will also cause the
         # GUI libraries to be loaded, which we do not want when using calibre
         # from the command line
+        logger.debug(sys._getframe().f_code.co_name)
+
         from calibre_plugins.quietthyme.config import ConfigWidget
         return ConfigWidget()
 
@@ -740,7 +752,9 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         :param config_widget: The widget returned by :meth:`config_widget`.
         '''
+        logger.debug(sys._getframe().f_code.co_name)
         config_widget.save_settings()
+        self.is_connected = False #force plugin to be re-opened after a user closes the config window.
 
     def settings(self):
         '''
