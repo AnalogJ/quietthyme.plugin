@@ -27,7 +27,6 @@ prefs.defaults['debug_mode'] = False
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
 prefs.defaults['api_base'] = 'localhost:1337'
 #prefs.defaults['api_base'] = 'build.quietthyme.com'
-#prefs.defaults['api_base'] = 'http://192.150.23.196:1337/'
 # (String) the access token used to communicate with the quietthyme API
 # TODO: this should be None when deployed.
 prefs.defaults['token'] = ''
@@ -45,10 +44,6 @@ class ConfigWidget(QWidget):
         self.l.addWidget(self.debug_checkbox)
 
         self.config_url = QUrl('https://'+prefs['api_base']+'/link/start')
-        #self.config_url = QUrl.fromEncoded('https://www.dropbox.com/login')
-        #self.config_url = QUrl.fromEncoded('https://accounts.google.com/ServiceLogin')
-        #self.config_url = QUrl.fromEncoded('http://www.google.com')
-
         self.webview = QTWebView(bearer_token=prefs['token'])
 
         self.webview.load(self.config_url)
@@ -68,10 +63,6 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.PrivateBrowsingEnabled, True)
         self.webview.show()
         self.l.addWidget(self.webview)
-
-
-
-
 
         if prefs['debug_mode']:
             self.inspector = QWebInspector()
@@ -113,25 +104,6 @@ class QTWebView(QWebView):
         page = QTWebPage(bearer_token=bearer_token)
         self.setPage(page)
         #TODO: if token is invalid, show a landing page.
-        # self.urlChanged.connect(self._url_changed)
-
-    ################################################################################################################
-    # Event Handlers
-    #
-    # def _url_changed(self, url):
-    #     origin = self.page().mainFrame().securityOrigin()
-    #     print("URL_CHANGED %s" % origin.host())
-
-        # origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("data", "", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("http", "www.youtube.com", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("https", "fonts.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("https", "cf.dropboxstatic.com", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("https", "fonts.gstatic.com", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry("https", "ajax.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-        # origin.addAccessWhitelistEntry(url.scheme(), url.host(), QWebSecurityOrigin.AllowSubdomains)
 
 
 class QTWebPage(QWebPage):
