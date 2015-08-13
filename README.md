@@ -1,6 +1,6 @@
 export PATH=/Applications/calibre.app/Contents/MacOS/:$PATH
 calibre-debug -s; calibre-customize -b .; calibre
-
+calibre-debug test/test_quietthymedeviceplugin.py
 
 on linux, calibre configuration is located in
 ~/.config/calibre/plugins/*

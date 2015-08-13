@@ -93,7 +93,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         """
 
     #: Ordered list of supported formats
-    FORMATS     = ["epub", "mobi", "pdf", "rtf", "txt", "lrf"  ]
+    FORMATS     = ["epub", "mobi", "pdf", "rtf", "txt", "lrf"]
     # If True, the config dialog will not show the formats box
     HIDE_FORMATS_CONFIG_BOX = False
 
