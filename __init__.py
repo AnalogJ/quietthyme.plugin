@@ -42,6 +42,7 @@ if prefs['debug_mode']:
     logger.setLevel(logging.DEBUG)
     ch.setLevel(logging.DEBUG)
     #add log to file channel.
+    #TODO: make this os agnostic using tempfile.gettempdir() and path.
     fh = logging.FileHandler('/tmp/plugin.quietthyme.calibre.log', 'w')
     fh.setFormatter(formatter)
     logger.addHandler(fh)

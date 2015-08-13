@@ -106,6 +106,36 @@ class ConfigWidget(QWidget):
     def validate(self):
         return True #self.webview.page().mainFrame().url() == self.config_url
 
+class QTWebView(QWebView):
+
+    def __init__(self, parent=None, bearer_token=None):
+        super(QWebView,self).__init__(parent)
+        page = QTWebPage()
+        self.nam = QTNetworkManager(bearer_token)
+        page.setNetworkAccessManager(self.nam)
+        self.setPage(page)
+        #TODO: if token is invalid, show a landing page.
+        self.urlChanged.connect(self._url_changed)
+
+    ################################################################################################################
+    # Event Handlers
+    #
+    # def _url_changed(self, url):
+    #     origin = self.page().mainFrame().securityOrigin()
+    #     print("URL_CHANGED %s" % origin.host())
+
+        # origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("data", "", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("http", "www.youtube.com", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("https", "fonts.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("https", "cf.dropboxstatic.com", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("https", "fonts.gstatic.com", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry("https", "ajax.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
+        # origin.addAccessWhitelistEntry(url.scheme(), url.host(), QWebSecurityOrigin.AllowSubdomains)
+
+
 class QTWebPage(QWebPage):
     """ Settings for the browser."""
 
@@ -143,38 +173,6 @@ class QTWebPage(QWebPage):
         #frame.securityOrigin().allOrigins().append(origin)
 
         return True
-
-class QTWebView(QWebView):
-
-    def __init__(self, parent=None, bearer_token=None):
-        super(QWebView,self).__init__(parent)
-        page = QTWebPage()
-        self.nam = QTNetworkManager(bearer_token)
-        page.setNetworkAccessManager(self.nam)
-        self.setPage(page)
-        #TODO: if token is invalid, show a landing page.
-        # self.urlChanged.connect(self._url_changed)
-
-    ################################################################################################################
-    # Event Handlers
-    #
-    # def _url_changed(self, url):
-    #     #origin = self.page().mainFrame().securityOrigin()
-    #     #print("URL_CHANGED %s" % origin.host())
-    #
-    #     # origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("data", "", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("http", "www.youtube.com", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("https", "fonts.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("https", "cf.dropboxstatic.com", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("https", "fonts.gstatic.com", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry("https", "ajax.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-    #     # origin.addAccessWhitelistEntry(url.scheme(), url.host(), QWebSecurityOrigin.AllowSubdomains)
-
-
-
 
 
 
