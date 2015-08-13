@@ -110,12 +110,10 @@ class QTWebView(QWebView):
 
     def __init__(self, parent=None, bearer_token=None):
         super(QWebView,self).__init__(parent)
-        page = QTWebPage()
-        self.nam = QTNetworkManager(bearer_token)
-        page.setNetworkAccessManager(self.nam)
+        page = QTWebPage(bearer_token=bearer_token)
         self.setPage(page)
         #TODO: if token is invalid, show a landing page.
-        self.urlChanged.connect(self._url_changed)
+        # self.urlChanged.connect(self._url_changed)
 
     ################################################################################################################
     # Event Handlers
@@ -139,9 +137,11 @@ class QTWebView(QWebView):
 class QTWebPage(QWebPage):
     """ Settings for the browser."""
 
-    def __init__(self, logger=None, parent=None):
+    def __init__(self, parent=None, bearer_token=None):
         super(QWebPage, self).__init__(parent)
-
+        self.bearer_token = bearer_token
+        self.nam = QTNetworkManager(bearer_token=bearer_token)
+        self.setNetworkAccessManager(self.nam)
     # def userAgentForUrl(self, url):
     #     """ Returns a User Agent that will be seen by the website. """
     #     return "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
@@ -151,37 +151,24 @@ class QTWebPage(QWebPage):
             print("JsConsole(%s:%d): %s" % (sourceID, lineNumber, msg))
 
     def acceptNavigationRequest(self, frame, request, type):
-        print("NavReq: %s: %s " % (request.url(),type))
+        print("NavReq: %s: %s " % (request.url(), type))
 
-        #origin = QWebSecurityOrigin(request.url())
         origin = frame.securityOrigin()
-        print("Security Origin: %s " % origin.host())
-        #TODO: make this whitelisting dynamic after the page first loads (all subsequent requests should automatically be whitelisted)
-        origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("data", "", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("http", "www.youtube.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", "fonts.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", "cf.dropboxstatic.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", "fonts.gstatic.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", "ajax.googleapis.com", QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("http", 'build.quietthyme.com', QWebSecurityOrigin.AllowSubdomains)
-        origin.addAccessWhitelistEntry("https", 'build.quietthyme.com', QWebSecurityOrigin.AllowSubdomains)
-        #frame.securityOrigin().allOrigins().append(origin)
+        print("Setting new Security Origin: %s " % origin.host())
 
+        self.nam = QTNetworkManager(bearer_token=self.bearer_token,frame_origin=origin)
+        self.setNetworkAccessManager(self.nam)
         return True
 
 
 
 class QTNetworkManager(QNetworkAccessManager):
 
-    def __init__(self, bearer_token=None):
+    def __init__(self, bearer_token=None, frame_origin=None):
         super(QNetworkAccessManager,self).__init__()
         self.bearer_token = bearer_token
         self.sslErrors.connect(self._ssl_errors)
+        self.frame_origin = frame_origin
 
     def createRequest(self, operation, request, data):
         request_host = request.url().host()
@@ -197,6 +184,15 @@ class QTNetworkManager(QNetworkAccessManager):
             url = request.url()
             url.setScheme('http')
             request.setUrl(url)
+
+        if self.frame_origin:
+            #adding the current resource request to the security origin witelist.
+            self.frame_origin.addAccessWhitelistEntry("http", "", QWebSecurityOrigin.AllowSubdomains)
+            self.frame_origin.addAccessWhitelistEntry("https", "", QWebSecurityOrigin.AllowSubdomains)
+            self.frame_origin.addAccessWhitelistEntry("qrc", "", QWebSecurityOrigin.AllowSubdomains)
+            self.frame_origin.addAccessWhitelistEntry("data", "", QWebSecurityOrigin.AllowSubdomains)
+            self.frame_origin.addAccessWhitelistEntry("https", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
+            self.frame_origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
 
         print("Requesting: %s" % request.url())
         reply = QNetworkAccessManager.createRequest(self,operation, request, data)
