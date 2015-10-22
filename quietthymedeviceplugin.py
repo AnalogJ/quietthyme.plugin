@@ -592,7 +592,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
             blist = 2 if location[0] == 'B' else 1 if location[0] == 'A' else 0
 
             try:
-                book = Book.from_quietthyme_metadata(location[1])
+                book = Book.from_quietthyme_metadata(location[1]['data'])
             except StandardError, e:
 
                 logger.debug('An error occured while adding book via QT data, using calibre data')

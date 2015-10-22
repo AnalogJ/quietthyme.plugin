@@ -8,6 +8,9 @@ on linux, calibre configuration is located in
 on mac, calibre configuration is located in
 ~/Library/Preferences/calibre/plugins/*
 
+log path is:
+/tmp/plugin.quietthyme.calibre.log
+
 
 CLI command 
 calibre-debug -r "QuietThyme Device Plugin"
