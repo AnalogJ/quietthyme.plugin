@@ -25,8 +25,8 @@ prefs = JSONConfig('plugins/quietthyme')
 prefs.defaults['debug_mode'] = False
 # determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
 # TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
-prefs.defaults['api_base'] = 'localhost:1337'
-#prefs.defaults['api_base'] = 'build.quietthyme.com'
+#prefs.defaults['api_base'] = 'localhost:1337'
+prefs.defaults['api_base'] = 'build.quietthyme.com'
 # (String) the access token used to communicate with the quietthyme API
 # TODO: this should be None when deployed.
 prefs.defaults['token'] = ''

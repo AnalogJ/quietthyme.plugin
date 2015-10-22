@@ -5,6 +5,9 @@ calibre-debug test/test_quietthymedeviceplugin.py
 on linux, calibre configuration is located in
 ~/.config/calibre/plugins/*
 
+on mac, calibre configuration is located in
+~/Library/Preferences/calibre/plugins/*
+
 
 CLI command 
 calibre-debug -r "QuietThyme Device Plugin"
