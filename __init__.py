@@ -52,7 +52,7 @@ class QuietthymePlugin(QuietthymeDevicePlugin):
     description         = 'QuietThyme storage plugin for Calibre'
     supported_platforms = ['windows', 'osx', 'linux']
     author              = 'Jason Kulatunga'
-    version             = (1, 0, 7)
+    version             = (1, 0, 8)
     minimum_calibre_version = (0, 7, 53)
     gui_name = 'QuietThyme Storage'
 

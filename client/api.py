@@ -24,7 +24,7 @@ class ApiClient():
             return {'success': False, 'error_msg': 'No library uuid found'}
         query_args = {'library_uuid': library_uuid}
 
-        response = RequestManager.create_request('GET', '/api/auth/calibre', query_args=query_args)
+        response = RequestManager.create_request('GET', '/auth/calibre', query_args=query_args)
         self.logger.debug(response)
         return response
 
@@ -37,7 +37,7 @@ class ApiClient():
         '''
         self.logger.debug(sys._getframe().f_code.co_name)
 
-        response = RequestManager.create_request('GET', '/api/storage/status')
+        response = RequestManager.create_request('GET', '/storage/status')
         self.logger.debug(response)
         return response
 
@@ -101,7 +101,7 @@ class ApiClient():
         json_data = json.dumps(qt_metadata, sort_keys=True,indent=4, separators=(',', ': '))
         self.logger.debug(json_data)
 
-        response = RequestManager.create_request('POST', '/api/book', json_data=json_data, query_args={'source': 'calibre'})
+        response = RequestManager.create_request('POST', '/book', json_data=json_data, query_args={'source': 'calibre'})
         self.logger.debug(response['data']['id'])
 
         qt_metadata['objectId'] = response['data']['id']
@@ -113,7 +113,7 @@ class ApiClient():
 
     def set_book_cover(self, qt_book_id, cover_local_filepath,qt_cover_filename):
         self.logger.debug(sys._getframe().f_code.co_name)
-        response = RequestManager.create_file_request("/api/storage/thumb/upload", {'source':'calibre'},
+        response = RequestManager.create_file_request("/storage/thumb/upload", {'source':'calibre'},
                                                   {"book_id": qt_book_id,
                                                    "file_name": qt_cover_filename},
                                                   {"file": cover_local_filepath}
@@ -127,7 +127,7 @@ class ApiClient():
         This function will download a list of book metadata from QuietThyme.
         '''
 
-        response = RequestManager.create_request('GET', '/api/book', query_args={'storage_type': storage_type})
+        response = RequestManager.create_request('GET', '/book', query_args={'storage_type': storage_type})
         self.logger.debug(response)
         return response
 
@@ -137,7 +137,7 @@ class ApiClient():
 
         qt_filename_base, qt_filename_ext = os.path.splitext(qt_filename)
         self.logger.debug(qt_filename_base,qt_filename_ext)
-        response = RequestManager.create_file_request("/api/storage/upload", {'source':'calibre'},
+        response = RequestManager.create_file_request("/storage/upload", {'source':'calibre'},
                                                   {"book_id": qt_book_id,
                                                    "storage_type": storage_type,
                                                    "file_name": qt_filename_base,
@@ -157,7 +157,7 @@ class ApiClient():
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        response = RequestManager.create_request('DELETE', '/api/book/' + parsed_data['book_id'])
+        response = RequestManager.create_request('DELETE', '/book/' + parsed_data['book_id'])
         self.logger.debug(response)
         return response
 
@@ -167,7 +167,7 @@ class ApiClient():
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        return RequestManager.create_request('GET', '/api/storage/' + parsed_data['book_id'], json_response=False)
+        return RequestManager.create_request('GET', '/storage/' + parsed_data['book_id'], json_response=False)
 
 
 

@@ -9,7 +9,7 @@ __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths
 
 from calibre.utils.config import JSONConfig
 
@@ -23,12 +23,24 @@ prefs = JSONConfig('plugins/quietthyme')
 # Set defaults
 # determines if the plugin logger is enabled.
 prefs.defaults['debug_mode'] = False
-# determines if the plugin communicates with build.quietthyme.com or www.quietthyme.com
-# TODO: this should be build.quiethyme.com or www.quietthyme.com when ready
-#prefs.defaults['api_base'] = 'localhost:1337'
-prefs.defaults['api_base'] = 'build.quietthyme.com'
+
+# determines if the plugin communicates with beta or master
+prefs.defaults['beta_mode'] = False
+
+beta_api_base = 'https://api.quietthyme.com/beta'
+beta_web_base = 'https://beta.quietthyme.com'
+
+master_api_base = 'https://api.quietthyme.com/v1'
+master_web_base = 'https://www.quietthyme.com'
+
+if prefs['beta_mode']:
+    prefs.defaults['api_base'] = beta_api_base
+    prefs.defaults['web_base'] = beta_web_base
+else:
+    prefs.defaults['api_base'] = master_api_base
+    prefs.defaults['web_base'] = master_web_base
+
 # (String) the access token used to communicate with the quietthyme API
-# TODO: this should be None when deployed.
 prefs.defaults['token'] = ''
 
 class ConfigWidget(QWidget):
@@ -43,16 +55,18 @@ class ConfigWidget(QWidget):
         self.debug_checkbox.setChecked(prefs['debug_mode'])
         self.l.addWidget(self.debug_checkbox)
 
-        self.config_url = QUrl('https://'+prefs['api_base']+'/link/start')
+        self.beta_checkbox = QCheckBox('Beta Mode')
+        self.beta_checkbox.setChecked(prefs['beta_mode'])
+        self.l.addWidget(self.beta_checkbox)
+
+        self.config_url = QUrl(prefs['web_base']+'/storage/calibre')
         self.webview = QTWebView(bearer_token=prefs['token'])
 
         self.webview.load(self.config_url)
-        if prefs['debug_mode']:
-            self.webview.setMinimumSize(QSize(600, 300))
-        else:
-            self.webview.setMinimumSize(QSize(600, 600))
         self.global_settings = self.webview.page().settings() #QWebSettings.globalSettings()
-        self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
+
+        self.global_settings.setAttribute(QWebSettings.LocalStorageEnabled, True) #required since this is where we store tokens.
+        self.global_settings.setAttribute(QWebSettings.PrivateBrowsingEnabled,False)
         self.global_settings.setAttribute(QWebSettings.JavascriptEnabled, True)
         self.global_settings.setAttribute(QWebSettings.JavascriptCanOpenWindows, True)
         self.global_settings.setAttribute(QWebSettings.JavascriptCanCloseWindows, True)
@@ -60,7 +74,19 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.LocalContentCanAccessRemoteUrls, True)
         self.global_settings.setAttribute(QWebSettings.LocalContentCanAccessFileUrls, True)
         self.global_settings.setAttribute(QWebSettings.XSSAuditingEnabled, False)
-        self.global_settings.setAttribute(QWebSettings.PrivateBrowsingEnabled, True)
+        self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
+
+        path = QStandardPaths.writableLocation(QStandardPaths.GenericDataLocation)
+        self.global_settings.setOfflineStoragePath(path)
+        self.global_settings.enablePersistentStorage(path)
+        self.global_settings.setLocalStoragePath(path)
+
+
+        if prefs['debug_mode']:
+            self.webview.setMinimumSize(QSize(600, 300))
+        else:
+            self.webview.setMinimumSize(QSize(600, 600))
+
         self.webview.show()
         self.l.addWidget(self.webview)
 
@@ -72,30 +98,38 @@ class ConfigWidget(QWidget):
             self.l.addWidget(self.inspector)
             self.inspector.setPage(self.webview.page())
 
-        # self.webview.urlChanged.connect(_url_changed)
-        # self.webview.loadFinished.connect(_load_finished)
+        self.webview.urlChanged.connect(self._url_changed)
+        self.webview.loadFinished.connect(self._load_finished)
 
-    ################################################################################################################
-    # Event Handlers
-    #
-    # def _url_changed(url):
-    #         print('url changed: ', url)
-    #
-    # def _load_finished(ok):
-    #     print('load finished, ok: ', ok)
-    #     if self.webview.page().mainFrame().url() == self.config_url:
-    #         print('requested url = current url')
-    #         # token = self.webview.page().mainFrame().evaluateJavaScript("""
-    #         # getAuthToken();
-    #         # """)
-    #         # print(token)
-    #         # prefs['token'] = token
 
     def save_settings(self):
         prefs['debug_mode'] = self.debug_checkbox.isChecked()
 
+        prefs['beta_mode'] = self.beta_checkbox.isChecked()
+
+
     def validate(self):
         return True #self.webview.page().mainFrame().url() == self.config_url
+
+    ################################################################################################################
+    # Event Handlers
+    #
+    def _url_changed(self, url):
+        print('======== url changed: ', url)
+
+    def _load_finished(self, ok):
+        print('========== load finished, ok: ', ok)
+        if self.webview.page().mainFrame().url() == self.config_url:
+            print('===== requested url = current url')
+            self.webview.page().mainFrame().evaluateJavaScript("""
+            console.log("EVALUDATE JAVASCRIPT")
+            """)
+            token = self.webview.page().mainFrame().evaluateJavaScript("""
+            localStorage.getItem('id_token');
+            """)
+            print(token)
+            prefs['token'] = token
+
 
 class QTWebView(QWebView):
 
@@ -145,7 +179,7 @@ class QTNetworkManager(QNetworkAccessManager):
     def createRequest(self, operation, request, data):
         request_host = request.url().host()
         request_path = request.url().path()
-        quietthyme_host = QUrl('http://' + prefs['api_base']).host()
+        quietthyme_host = QUrl(prefs['web_base']).host()
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             print("Adding QT Auth header: %s", request.url())

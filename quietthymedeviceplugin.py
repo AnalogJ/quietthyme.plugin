@@ -43,7 +43,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     description         = 'QuietThyme storage plugin for Calibre'
     supported_platforms = ['windows', 'osx', 'linux']
     author              = 'Jason Kulatunga'
-    version             = (1, 0, 7)
+    version             = (1, 0, 8)
     minimum_calibre_version = (0, 7, 53)
     gui_name = 'QuietThyme Storage'
 
@@ -310,22 +310,23 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger.debug(sys._getframe().f_code.co_name)
 
         # At this point we know that the user has a valid network connection.
-        # if not prefs['token']:
-        #    # if there is no access_token set, the user hasn't logged in. We can't do anything.
-        #    raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
-        response = ApiClient().auth(library_uuid, current_library_name())
+        if not prefs['token']:
+           # if there is no access_token set, the user hasn't logged in. We can't do anything.
+           raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
 
-        #if everything is successful set is_connected to true.
-        if not response['success']:
-            raise OpenFeedback(response['error_msg'])
-        else:
-            prefs['token'] = response['data']['token']
-        self.is_connected = response['success']
+        # response = ApiClient().auth(library_uuid, current_library_name())
+        #
+        # #if everything is successful set is_connected to true.
+        # if not response['success']:
+        #     raise OpenFeedback(response['error_msg'])
+        # else:
+        #     prefs['token'] = response['data']['token']
+        # self.is_connected = response['success']
 
         status_response = ApiClient().status(library_uuid, current_library_name())
         if not status_response['success']:
             raise OpenFeedback(status_response['error_msg'])
-
+        self.is_connected = status_response['success']
             #store the settings in memory
         self.current_library_uuid = library_uuid
         #mimic from

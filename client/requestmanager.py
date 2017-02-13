@@ -18,7 +18,7 @@ __docformat__ = 'restructuredtext en'
 
 
 class RequestManager(object):
-    api_base = "http://" +  prefs['api_base']
+    api_base = prefs['api_base']
 
     @classmethod
     def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True):
@@ -37,10 +37,10 @@ class RequestManager(object):
             encoded_args = urllib.urlencode(query_args)
             path += "?" + encoded_args
 
-        logger.info('Requesting url: %s %s' % (domain,path))
+        logger.info('Requesting url: %s %s %s' % (schema, domain, path))
         try:
 
-            http = httplib.HTTPConnection(domain)
+            http = httplib.HTTPSConnection(domain)
             http.connect()
             headers = {}
 
@@ -50,7 +50,7 @@ class RequestManager(object):
                 headers['Content-Length'] = clen
 
             if 'token' in prefs:
-                headers['Authorization'] = 'Bearer ' + prefs['token']
+                headers['Authorization'] = 'JWT ' + prefs['token']
             http.request(action, path, json_data or None, headers)
 
             try:
@@ -66,6 +66,7 @@ class RequestManager(object):
                         return r.read()
                 else:
                     logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                    logger.error('Response headers: %s' % r.getheaders())
             except Exception, e:
                 logger.error(e)
             finally:
