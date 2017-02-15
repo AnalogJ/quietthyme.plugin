@@ -195,7 +195,7 @@ class ApiClient():
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        return RequestManager.create_request('GET', '/storage/' + parsed_data['book_id'], json_response=False)
+        return RequestManager.create_request('GET', '/storage/' + parsed_data['book_id'], json_response=False, allow_redirects=True)
 
 
 

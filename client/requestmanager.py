@@ -20,16 +20,34 @@ __docformat__ = 'restructuredtext en'
 class RequestManager(object):
     api_base = prefs['api_base']
 
+
     @classmethod
-    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True):
+    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0):
         logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
+
+        headers = {}
 
         if not query_args:
             query_args = {}
 
         # Build the request
-        url = RequestManager.api_base + endpoint
+        if action == 'GET' and allow_redirects and redirect_depth > 0:
+            # we're  currently redirecting, dont mess with url or headers.
+            if redirect_depth > 10:
+                raise Exception("Redirected "+redirect_depth+" times, giving up.")
+            url = endpoint
+        else:
+            url = RequestManager.api_base + endpoint
+
+            if json_data:
+                clen = len(json_data)
+                headers['Content-Type'] = 'application/json'
+                headers['Content-Length'] = clen
+
+            if 'token' in prefs:
+                headers['Authorization'] = 'JWT ' + prefs['token']
+
         schema, domain, path, params, query, fragments = \
             urlparse.urlparse(url)
 
@@ -42,19 +60,11 @@ class RequestManager(object):
 
             http = httplib.HTTPSConnection(domain)
             http.connect()
-            headers = {}
-
-            if json_data:
-                clen = len(json_data)
-                headers['Content-Type'] = 'application/json'
-                headers['Content-Length'] = clen
-
-            if 'token' in prefs:
-                headers['Authorization'] = 'JWT ' + prefs['token']
             http.request(action, path, json_data or None, headers)
 
             try:
                 r = http.getresponse()
+                location_header = r.getheader('Location')
                 if r.status == 200:
                     logger.debug('Request successful (%s): %s' % (r.status, r.reason))
 
@@ -64,6 +74,8 @@ class RequestManager(object):
                         return json.loads(data)
                     else:
                         return r.read()
+                elif (r.status == 301 or r.status == 302) and allow_redirects and (location_header != url):
+                    return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
                 else:
                     logger.error('Request failed (%s): %s' % (r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())
