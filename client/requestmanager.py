@@ -77,6 +77,49 @@ class RequestManager(object):
             logger.error("Error:", str(e))
             raise SystemExit(1)
 
+    @classmethod
+    def create_signed_file_request(self, url, filepath, json_response=False):
+        logger = logging.getLogger(__name__)
+        logger.debug(sys._getframe().f_code.co_name)
+
+        headers = {
+            "Content−type": "application/octet−stream",
+            "Accept": "text/plain"
+        }
+
+        schema, domain, path, params, query, fragments = \
+            urlparse.urlparse(url)
+
+        if query:
+            path += "?" + query
+
+        logger.debug("Upload URL: %s" % (path))
+        http = httplib.HTTPSConnection(domain)
+        http.request("PUT", path, open(filepath, "rb"), headers)
+
+
+        try:
+            r = http.getresponse()
+            if r.status == 200:
+                logger.debug('Request successful (%s): %s' % (r.status, r.reason))
+
+                if json_response:
+                    data = r.read()
+                    logger.debug(data)
+                    return json.loads(data)
+                else:
+                    return r.read()
+            else:
+                logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                logger.error('Response headers: %s' % r.getheaders())
+                logger.error('Response data: %s' % r.read())
+        except Exception, e:
+            logger.error(e)
+        finally:
+            logger.debug('Closing http request')
+            http.close()
+
+
     #from https://github.com/kovidgoyal/calibre/blob/ef09e886b3d95d6de5c76ad3a179694ae75c65f4/setup/pypi.py#L235
     @classmethod
     def create_file_request(cls, endpoint="/",query_args=None, form_fields=None, filepath_fields=None):

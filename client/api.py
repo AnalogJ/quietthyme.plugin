@@ -111,44 +111,72 @@ class ApiClient():
         # resp.finished.connect(self.handleFinished)
         # self.logger.debug(resp.readAll())
 
-    def set_book_cover(self, qt_book_id, cover_local_filepath,qt_cover_filename):
-        self.logger.debug(sys._getframe().f_code.co_name)
-        response = RequestManager.create_file_request("/storage/thumb/upload", {'source':'calibre'},
-                                                  {"book_id": qt_book_id,
-                                                   "file_name": qt_cover_filename},
-                                                  {"file": cover_local_filepath}
-                                                  #{'file':'/home/jason/Documents/Daulton, John/Galactic Mage, The/Galactic Mage, The - John Daulton.mobi'}
-                                                  )
-        self.logger.debug(response)
-        return response
-
-    def books(self, storage_type):
+    def books(self, storage_id):
         '''
         This function will download a list of book metadata from QuietThyme.
         '''
 
-        response = RequestManager.create_request('GET', '/book', query_args={'storage_type': storage_type})
+        response = RequestManager.create_request('GET', '/book', query_args={'storage_id': storage_id})
         self.logger.debug(response)
         return response
 
 
-    def create_bookstorage(self, qt_book_id, storage_type, local_filepath, qt_filename, replace_file=False):
+    def prepare_bookstorage(self, qt_storage_metadata):
         self.logger.debug(sys._getframe().f_code.co_name)
 
-        qt_filename_base, qt_filename_ext = os.path.splitext(qt_filename)
-        self.logger.debug(qt_filename_base,qt_filename_ext)
-        response = RequestManager.create_file_request("/storage/upload", {'source':'calibre'},
-                                                  {"book_id": qt_book_id,
-                                                   "storage_type": storage_type,
-                                                   "file_name": qt_filename_base,
-                                                   "format": qt_filename_ext[1:],
-                                                   "replace_file": replace_file
-                                                   },
-                                                  {"file": local_filepath}
-                                                  #{'file':'/home/jason/Documents/Daulton, John/Galactic Mage, The/Galactic Mage, The - John Daulton.mobi'}
-                                                  )
+        json_data = json.dumps(qt_storage_metadata, sort_keys=True,indent=4, separators=(',', ': '))
+        self.logger.debug(json_data)
+
+        response = RequestManager.create_request('POST', '/storage/prepare/book', json_data=json_data)
         self.logger.debug(response)
         return response
+
+
+    def prepare_cover_storage(self, qt_book_id, qt_cover_filename, replace_file=False):
+        self.logger.debug(sys._getframe().f_code.co_name)
+
+        qt_filename_base, qt_filename_ext = os.path.splitext(qt_cover_filename)
+        self.logger.debug(qt_filename_base,qt_filename_ext)
+
+
+        qt_payload = {
+            'book_id': qt_book_id,
+            'filename': qt_filename_base,
+            'format': qt_filename_ext
+        }
+        json_data = json.dumps(qt_payload, sort_keys=True,indent=4, separators=(',', ': '))
+        self.logger.debug(json_data)
+
+        response = RequestManager.create_request('POST', '/storage/prepare/cover', json_data=json_data)
+        self.logger.debug(response)
+        return response
+
+    def upload_bookstorage(self, signed_url, local_filepath):
+        self.logger.debug(sys._getframe().f_code.co_name)
+
+        # response = RequestManager.create_file_request("/storage/upload/book", {'source':'calibre'},
+        #                                           {"book_id": qt_book_id,
+        #                                            "storage_id": storage_id,
+        #                                            "file_name": qt_filename_base,
+        #                                            "format": qt_filename_ext[1:],
+        #                                            "replace_file": replace_file
+        #                                            },
+        #                                           {"file": local_filepath}
+        #                                           #{'file':'/home/jason/Documents/Daulton, John/Galactic Mage, The/Galactic Mage, The - John Daulton.mobi'}
+        #                                           )
+        response = RequestManager.create_signed_file_request(signed_url, local_filepath)
+
+        self.logger.debug(response)
+        return response
+
+    def upload_cover(self, signed_url,local_filepath):
+        self.logger.debug(sys._getframe().f_code.co_name)
+
+        response = RequestManager.create_signed_file_request(signed_url, local_filepath)
+
+        self.logger.debug(response)
+        return response
+
 
     def destroy_book(self, calibre_storage_path):
         self.logger.debug(sys._getframe().f_code.co_name)
