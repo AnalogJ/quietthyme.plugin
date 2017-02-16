@@ -35,9 +35,9 @@ class Book(Metadata):
             book.authors.append(author)
         book.size = qt_metadata['storage_size']
         #book.datetime = qt_metadata[]
-        book.quietthyme_id = qt_metadata['objectId']
+        book.quietthyme_id = qt_metadata['id']
         book.path = qt_metadata['storage_type'] + '://' + \
-                    str(qt_metadata['objectId']) + '/' + \
+                    str(qt_metadata['id']) + '/' + \
                     qt_metadata['storage_filename'] + qt_metadata['storage_format']
         book.thumbnail = None
         book.tags = qt_metadata['tags']
@@ -68,7 +68,7 @@ class Book(Metadata):
 
         #book.thumbnail = Thumbnail("/home/jason/cover.jpg")
         #book.thumbnail = Thumbnail('http://ak-hdl.buzzfed.com/static/enhanced/webdr06/2013/7/30/18/grid-cell-14969-1375222023-8.jpg')
-        cover_path = qt_metadata.get('cover','')
+        cover_path = qt_metadata.get('cover', '')
         if cover_path:
             import urllib2
             try:
