@@ -12,21 +12,21 @@ class ApiClient():
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def auth(self, library_uuid, library_name):
-        """
-        This function will authenticate with Quietthyme and generate a JWT for subsequent api calls.
-        :param library_uuid: calibre library identifier
-        :return: quietthyme jwt.
-        """
-        self.logger.debug(sys._getframe().f_code.co_name)
-
-        if not library_uuid:
-            return {'success': False, 'error_msg': 'No library uuid found'}
-        query_args = {'library_uuid': library_uuid}
-
-        response = RequestManager.create_request('GET', '/auth/calibre', query_args=query_args)
-        self.logger.debug(response)
-        return response
+    # def auth(self, library_uuid, library_name):
+    #     """
+    #     This function will authenticate with Quietthyme and generate a JWT for subsequent api calls.
+    #     :param library_uuid: calibre library identifier
+    #     :return: quietthyme jwt.
+    #     """
+    #     self.logger.debug(sys._getframe().f_code.co_name)
+    #
+    #     if not library_uuid:
+    #         return {'success': False, 'error_msg': 'No library uuid found'}
+    #     query_args = {'library_uuid': library_uuid}
+    #
+    #     response = RequestManager.create_request('GET', '/auth/calibre', query_args=query_args)
+    #     self.logger.debug(response)
+    #     return response
 
     def status(self, library_uuid, library_name):
         '''
