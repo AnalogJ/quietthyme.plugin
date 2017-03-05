@@ -37,7 +37,7 @@ class ApiClient():
         '''
         self.logger.debug(sys._getframe().f_code.co_name)
 
-        response = RequestManager.create_request('GET', '/storage/status')
+        response = RequestManager.create_request('GET', '/storage/status', query_args={'source': 'calibre'})
         self.logger.debug(response)
         return response
 
