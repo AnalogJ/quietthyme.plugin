@@ -22,7 +22,7 @@ class RequestManager(object):
 
 
     @classmethod
-    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0):
+    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0, external_request=False):
         logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
 
@@ -32,7 +32,7 @@ class RequestManager(object):
             query_args = {}
 
         # Build the request
-        if action == 'GET' and allow_redirects and redirect_depth > 0:
+        if action == 'GET' and allow_redirects and (redirect_depth > 0 or external_request):
             # we're  currently redirecting, dont mess with url or headers.
             if redirect_depth > 10:
                 raise Exception("Redirected "+redirect_depth+" times, giving up.")
@@ -75,6 +75,7 @@ class RequestManager(object):
                     else:
                         return r.read()
                 elif (r.status == 301 or r.status == 302) and allow_redirects and (location_header != url):
+                    logger.info("Redirecting to another url, and continuing request.")
                     return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
                 else:
                     logger.error('Request failed (%s): %s' % (r.status, r.reason))

@@ -195,7 +195,9 @@ class ApiClient():
         pattern = r"(?P<storage_type>\S+)://(?P<book_id>\S+)/(?P<file_name>\D+)"
         parsed_data = re.search(pattern, calibre_storage_path).groupdict()
 
-        return RequestManager.create_request('GET', '/storage/' + parsed_data['book_id'], json_response=False, allow_redirects=True)
-
+        url_response =  RequestManager.create_request('GET', '/storage/' + parsed_data['book_id'], json_response=True)
+        # unfortunaly the API cant do the redirect for us, so we need to start a new request using the url param.
+        self.logger.debug(url_response)
+        return RequestManager.create_request('GET', url_response['data']['url'], json_response=False, allow_redirects=True, external_request=True)
 
 
