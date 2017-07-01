@@ -507,7 +507,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
         storage_id = self.qt_settings.get(card_id,{}).get('storage_id',None)
         if (storage_id is not None) and (storage_type != 'quietthyme'):
-            qt_booklist = ApiClient().books(storage_id)['data']
+            qt_booklist = ApiClient().books(storage_id)['data']['Items']
         else:
             qt_booklist = []
 
