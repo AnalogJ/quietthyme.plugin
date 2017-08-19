@@ -35,10 +35,10 @@ class Book(Metadata):
             book.authors.append(author)
         book.size = qt_metadata['storage_size']
         #book.datetime = qt_metadata[]
-        book.quietthyme_id = qt_metadata['objectId']
+        book.quietthyme_id = qt_metadata['id']
         book.path = qt_metadata['storage_type'] + '://' + \
-                    qt_metadata['objectId'] + '/' + \
-                    qt_metadata['storage_file_name'] + '.' + qt_metadata['storage_format']
+                    str(qt_metadata['id']) + '/' + \
+                    qt_metadata['storage_filename'] + qt_metadata['storage_format']
         book.thumbnail = None
         book.tags = qt_metadata['tags']
 
@@ -68,11 +68,11 @@ class Book(Metadata):
 
         #book.thumbnail = Thumbnail("/home/jason/cover.jpg")
         #book.thumbnail = Thumbnail('http://ak-hdl.buzzfed.com/static/enhanced/webdr06/2013/7/30/18/grid-cell-14969-1375222023-8.jpg')
-        thumb_url = qt_metadata.get('thumb_url','')
-        if thumb_url:
+        cover_path = qt_metadata.get('cover', '')
+        if cover_path:
             import urllib2
             try:
-                book.thumbnail = urllib2.urlopen(thumb_url).read()
+                book.thumbnail = urllib2.urlopen("https://s3.amazonaws.com/" + cover_path).read()
             except:
                 book.thumbnail = None
 

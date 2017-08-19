@@ -16,33 +16,27 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
-
 class RequestManager(object):
-    api_base = "http://" +  prefs['api_base']
+    api_base = prefs['api_base']
 
     @classmethod
-    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True):
+    def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0, external_request=False):
         logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
+
+        headers = {}
 
         if not query_args:
             query_args = {}
 
         # Build the request
-        url = RequestManager.api_base + endpoint
-        schema, domain, path, params, query, fragments = \
-            urlparse.urlparse(url)
-
-        if query_args:
-            encoded_args = urllib.urlencode(query_args)
-            path += "?" + encoded_args
-
-        logger.info('Requesting url: %s %s' % (domain,path))
-        try:
-
-            http = httplib.HTTPConnection(domain)
-            http.connect()
-            headers = {}
+        if action == 'GET' and allow_redirects and (redirect_depth > 0 or external_request):
+            # we're  currently redirecting, dont mess with url or headers.
+            if redirect_depth > 10:
+                raise Exception("Redirected "+redirect_depth+" times, giving up.")
+            url = endpoint
+        else:
+            url = RequestManager.api_base + endpoint
 
             if json_data:
                 clen = len(json_data)
@@ -50,11 +44,25 @@ class RequestManager(object):
                 headers['Content-Length'] = clen
 
             if 'token' in prefs:
-                headers['Authorization'] = 'Bearer ' + prefs['token']
+                headers['Authorization'] = 'JWT ' + prefs['token']
+
+        schema, domain, path, params, query, fragments = \
+            urlparse.urlparse(url)
+
+        if query_args:
+            encoded_args = urllib.urlencode(query_args)
+            path += "?" + encoded_args
+
+        logger.info('Requesting url: %s %s %s' % (schema, domain, path))
+        try:
+
+            http = httplib.HTTPSConnection(domain)
+            http.connect()
             http.request(action, path, json_data or None, headers)
 
             try:
                 r = http.getresponse()
+                location_header = r.getheader('Location')
                 if r.status == 200:
                     logger.debug('Request successful (%s): %s' % (r.status, r.reason))
 
@@ -64,8 +72,12 @@ class RequestManager(object):
                         return json.loads(data)
                     else:
                         return r.read()
+                elif (r.status == 301 or r.status == 302) and allow_redirects and (location_header != url):
+                    logger.info("Redirecting to another url, and continuing request.")
+                    return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
                 else:
                     logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                    logger.error('Response headers: %s' % r.getheaders())
             except Exception, e:
                 logger.error(e)
             finally:
@@ -75,6 +87,49 @@ class RequestManager(object):
         except socket.error, e:
             logger.error("Error:", str(e))
             raise SystemExit(1)
+
+    @classmethod
+    def create_signed_file_request(self, url, filepath, json_response=False):
+        logger = logging.getLogger(__name__)
+        logger.debug(sys._getframe().f_code.co_name)
+
+        headers = {
+            "Content−type": "application/octet−stream",
+            "Accept": "text/plain"
+        }
+
+        schema, domain, path, params, query, fragments = \
+            urlparse.urlparse(url)
+
+        if query:
+            path += "?" + query
+
+        logger.debug("Upload URL: %s" % (path))
+        http = httplib.HTTPSConnection(domain)
+        http.request("PUT", path, open(filepath, "rb"), headers)
+
+
+        try:
+            r = http.getresponse()
+            if r.status == 200:
+                logger.debug('Request successful (%s): %s' % (r.status, r.reason))
+
+                if json_response:
+                    data = r.read()
+                    logger.debug(data)
+                    return json.loads(data)
+                else:
+                    return r.read()
+            else:
+                logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                logger.error('Response headers: %s' % r.getheaders())
+                logger.error('Response data: %s' % r.read())
+        except Exception, e:
+            logger.error(e)
+        finally:
+            logger.debug('Closing http request')
+            http.close()
+
 
     #from https://github.com/kovidgoyal/calibre/blob/ef09e886b3d95d6de5c76ad3a179694ae75c65f4/setup/pypi.py#L235
     @classmethod

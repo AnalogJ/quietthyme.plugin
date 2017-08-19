@@ -43,7 +43,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     description         = 'QuietThyme storage plugin for Calibre'
     supported_platforms = ['windows', 'osx', 'linux']
     author              = 'Jason Kulatunga'
-    version             = (1, 0, 7)
+    version             = (1, 0, 8)
     minimum_calibre_version = (0, 7, 53)
     gui_name = 'QuietThyme Storage'
 
@@ -310,22 +310,23 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger.debug(sys._getframe().f_code.co_name)
 
         # At this point we know that the user has a valid network connection.
-        # if not prefs['token']:
-        #    # if there is no access_token set, the user hasn't logged in. We can't do anything.
-        #    raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
-        response = ApiClient().auth(library_uuid, current_library_name())
+        if not prefs['token']:
+           # if there is no access_token set, the user hasn't logged in. We can't do anything.
+           raise OpenFeedback('QuietThyme has not been authorized on this machine. Please open the plugin preferences to login.')
 
-        #if everything is successful set is_connected to true.
-        if not response['success']:
-            raise OpenFeedback(response['error_msg'])
-        else:
-            prefs['token'] = response['data']['token']
-        self.is_connected = response['success']
+        # response = ApiClient().auth(library_uuid, current_library_name())
+        #
+        # #if everything is successful set is_connected to true.
+        # if not response['success']:
+        #     raise OpenFeedback(response['error_msg'])
+        # else:
+        #     prefs['token'] = response['data']['token']
+        # self.is_connected = response['success']
 
         status_response = ApiClient().status(library_uuid, current_library_name())
         if not status_response['success']:
             raise OpenFeedback(status_response['error_msg'])
-
+        self.is_connected = status_response['success']
             #store the settings in memory
         self.current_library_uuid = library_uuid
         #mimic from
@@ -504,8 +505,9 @@ class QuietthymeDevicePlugin(DevicePlugin):
         logger.debug(sys._getframe().f_code.co_name)
         card_id = self._convert_oncard_to_cardid(oncard)
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
-        if (storage_type is not None) and (storage_type != 'quietthyme'):
-            qt_booklist = ApiClient().books(storage_type)['data']
+        storage_id = self.qt_settings.get(card_id,{}).get('storage_id',None)
+        if (storage_id is not None) and (storage_type != 'quietthyme'):
+            qt_booklist = ApiClient().books(storage_id)['data']['Items']
         else:
             qt_booklist = []
 
@@ -548,19 +550,19 @@ class QuietthymeDevicePlugin(DevicePlugin):
         for i, local_filepath in enumerate(files):
             local_metadata, fname = metadata.next(), names.next()
 
-            qt_metadata = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_type','quietthyme'), local_metadata,  replace_file=True)
+            qt_book_data = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_id', 0), local_metadata,  replace_file=True)
             try:
 
                 if local_metadata.get('cover'):
                     # dest_info['image'] = self._upload_cover(qt_metadata,local_metadata)
-                    qt_metadata = self._upload_cover(qt_metadata,local_metadata)
+                    qt_book_data = self._upload_cover(qt_book_data, local_metadata)
 
             except Exception as inst:  # Failure to upload cover is not catastrophic
                 # import traceback
                 # traceback.print_exc()
                 logger.error('could not upload cover %s' % inst)
 
-            dest_info.append((card_id, qt_metadata)) #pass the calibre metadata (mdata) as a backup, should not be used though...
+            dest_info.append((card_id, qt_book_data)) #pass the calibre metadata (mdata) as a backup, should not be used though...
             self.report_progress((i+1) / float(len(files)), _('Transferring books to device...'))
 
         self.report_progress(1.0, _('Transferring books to device...'))
@@ -592,7 +594,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
             blist = 2 if location[0] == 'B' else 1 if location[0] == 'A' else 0
 
             try:
-                book = Book.from_quietthyme_metadata(location[1]['data'])
+                book = Book.from_quietthyme_metadata(location[1])
             except StandardError, e:
 
                 logger.debug('An error occured while adding book via QT data, using calibre data')
@@ -976,47 +978,47 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         return str(filepath)
 
-    def _upload_book(self, local_filepath, storage_type, local_metadata, replace_file=True):
+    def _upload_book(self, local_filepath, storage_id, local_metadata, replace_file=True):
         #TODO: upload the file and metadata to quietthyme. Determine if a new book should be created or replaced.
 
         qt_book_data = ApiClient().create_book(local_metadata)
 
-        #TODO: this bookstorage uploader is a bit flimsy
+        #after creating book metadata, we need to get a signed url so we can upload the book to QuietThyme storage
         qt_filename = self._create_upload_path('',local_metadata, local_filepath)
-        qt_bookstorage_data = ApiClient().create_bookstorage(qt_book_data["objectId"],
-                                                             storage_type,
-                                                             local_filepath,
-                                                             qt_filename,
-                                                             replace_file)
-        #qt_book_data['bookstorages'] = [qt_bookstorage_data]
+        qt_filename_base, qt_filename_ext = os.path.splitext(qt_filename)
 
-        #TODO: merge the book metadata with the bookstorage response to create qt_metadata
+        qt_storage_metadata = {
+            'book_id': qt_book_data['id'],
+            'storage_id': storage_id,
+            'replace': replace_file,
 
-        # postData = QUrlQuery();
-        # postData.addQueryItem("param1", "string");
-        # postData.addQueryItem("param2", "string");
-        #
-        # request = QNetworkRequest(serviceUrl);
-        # request.setHeader(QNetworkRequest::ContentTypeHeader,
-        #                            "application/x-www-form-urlencoded");
-        # networkManager.post(request, postData.toString(QUrl::FullyEncoded).toUtf8());
+            #only these parameters will be stored directly
+            'storage_size': os.stat(local_filepath).st_size, #storage size in bytes
+            'storage_filename': qt_filename_base, # nice filename for UI.=
+            'storage_format': qt_filename_ext # file extension
+        }
 
+        qt_upload_data = ApiClient().prepare_bookstorage(qt_storage_metadata)
+        qt_book_data.update(qt_upload_data['data']['book_data'])
 
-        # upload the metadata to QT to find/create a new book
-        # upload the book to quietthyme default storage
+        #TODO: this bookstorage uploader is a bit flimsy
+        ApiClient().upload_bookstorage(qt_upload_data['data']['upload_url'], local_filepath)
 
 
+        return qt_book_data
 
-
-        return qt_bookstorage_data['data']
-
-    def _upload_cover(self,qt_metadata,
+    def _upload_cover(self, qt_book_data,
                       local_metadata):
-        #TODO: using the return value of the uploaded book (the book ID) we should upload the cover to QuietThyme storage
+        # using the return value of the uploaded book (the book ID) we should upload the cover to QuietThyme storage
         # so that the cover is always available.
-        qt_cover_base, qt_cover_ext = os.path.splitext(local_metadata.get('cover'))
-        qt_cover_filename = 'cover' + qt_cover_ext
-        qt_book_data = ApiClient().set_book_cover(qt_metadata['objectId'],local_metadata.get('cover'),qt_cover_filename)
+        qt_filename = self._create_upload_path('', local_metadata, local_metadata.get('cover'))
+
+        qt_upload_data = ApiClient().prepare_cover_storage(qt_book_data["id"], qt_filename)
+        qt_book_data.update(qt_upload_data['data']['book_data'])
+
+
+        ApiClient().upload_cover(qt_upload_data['data']['upload_url'],
+                                                local_metadata.get('cover'))
         return qt_book_data
 
 
