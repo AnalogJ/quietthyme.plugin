@@ -16,10 +16,8 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
-
 class RequestManager(object):
     api_base = prefs['api_base']
-
 
     @classmethod
     def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0, external_request=False):
