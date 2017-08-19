@@ -151,4 +151,3 @@ detect_managed_devices
 detect_managed_devices
 detect_managed_devices
 shutdown
-
