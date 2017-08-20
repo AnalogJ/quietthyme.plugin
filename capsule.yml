@@ -1,4 +1,6 @@
 ---
+  engine_generic_version_path: 'version.py'
+  engine_generic_version_template: "version_tuple = (%d, %d, %d)"
   scm_enable_branch_cleanup: true
   scm_release_assets:
   - local_path: quietthyme_plugin.zip
