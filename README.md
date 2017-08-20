@@ -2,14 +2,14 @@
 
 This is an open source device driver plugin + web server for Calibre. 
 
-##Features:
+## Features:
 
 - It allows you to connect many of the most common cloud storage providers (Dropbox, Google Drive, etc.)
 - Clouds are connected as a device drives in Calibre (manage them as you would books on your eReader/iPad)
 - Automatically creates a web accessible OPDS server (you don't have to keep your computer on to run Calibre Content Server, or open ports on your router to access your library)
 - There's no limit to how many books you can store (you're only limited by your aggregate dropbox/google drive storage space)
 
-##Screenshots:##
+## Screenshots:
 
 _Configuration Screen (Dropbox + Google Drive Connected)_
 ![http://imgur.com/ehBUVrb](http://i.imgur.com/ehBUVrbl.png)
@@ -19,7 +19,7 @@ _Standard Calibre Device Management_
 ![http://imgur.com/QCmyYVf](http://i.imgur.com/QCmyYVfl.png)
 
 
-##Storage Providers:
+## Storage Providers:
 
 Here's a list of the storage providers that I currently have support for: 
 - Dropbox
@@ -32,7 +32,7 @@ Here's a list of storage providers I want to add support for if there's enough a
 - Bittorrent Sync
 - OwnCloud
 
-##Requests:
+## Requests:
 - I need developers who are willing to be beta testers for the plugin. Once we've ironed out any bugs I've missed I'll repost to the plugins forumn. 
 - I'm trying to figure out how to customize the UI to display custom icons and labels for the Card and Device buttons, I couldnt really figure out how to do that from the device driver api. Any help here would be appreciated. 
 
@@ -45,7 +45,7 @@ Please share this with any developers you think might be interested in beta test
 -Jason
 
 
-##Installation Instructions
+## Installation Instructions
 
 - Download the QuietThyme Device Plugin.zip file
 - Open Calibre
@@ -62,7 +62,7 @@ Please share this with any developers you think might be interested in beta test
 - Close all Preferences windows
 
 
-##Usage Instructions
+## Usage Instructions
 With QuietThyme installed, you'll see a few extra menu items. It is incredibly simple to store your books in your cloud storage. 
 
 - Right click on any book in your library and select "Send to device"
@@ -92,7 +92,7 @@ log path is:
 CLI command 
 calibre-debug -r "QuietThyme Device Plugin"
 
-#Important urls
+# Important urls
 - http://manual.calibre-ebook.com/plugins.html#module-calibre.devices.interface
 - http://manual.calibre-ebook.com/plugins.html#calibre.devices.usbms.driver.USBMS
     - https://github.com/kovidgoyal/calibre/tree/master/src/calibre/devices/usbms
@@ -122,7 +122,7 @@ The -- causes all subsequent arguments to be passed to your script.
 
 
 
-#initialization function calls
+# initialization function calls
 __init__
 startup
 is_dynamically_controllable
