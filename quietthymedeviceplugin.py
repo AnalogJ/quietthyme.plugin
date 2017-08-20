@@ -519,15 +519,18 @@ class QuietthymeDevicePlugin(DevicePlugin):
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
         storage_id = self.qt_settings.get(card_id,{}).get('storage_id',None)
         if (storage_id is not None) and (storage_type != 'quietthyme'):
-            qt_booklist = ApiClient().books(storage_id)['data']['Items']
+            qt_response = ApiClient().books_all(storage_id)['data']
+            qt_booklist = qt_response['Items']
         else:
             qt_booklist = []
 
         booklist = BookList(None, None, None)
-        for qt_metadata in qt_booklist:
+        for i, qt_metadata in enumerate(qt_booklist):
+            self.report_progress((i+1) / float(len(qt_booklist)), _('Loading books from device...'))
             if qt_metadata['storage_identifier']:
                 logger.debug(qt_metadata)
                 booklist.add_book(Book.from_quietthyme_metadata(qt_metadata), False)
+        self.report_progress(1.0, _('Loaded book from device'))
         return booklist
 
     def upload_books(self, files, names, on_card=None, end_session=True,

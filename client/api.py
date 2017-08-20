@@ -111,12 +111,39 @@ class ApiClient():
         # resp.finished.connect(self.handleFinished)
         # self.logger.debug(resp.readAll())
 
-    def books(self, storage_id):
+    def books_all(self, storage_id):
+        loaded_all = False
+
+        items = []
+        page = ""
+
+        while not loaded_all:
+            resp = self.books(storage_id, page)
+            items = items + resp["data"]["Items"]
+            page = resp["data"]["LastEvaluatedKey"]
+
+            if resp["data"]["LastEvaluatedKey"] == "":
+                loaded_all = True
+
+
+        return {
+            "data":{
+                "Items":items,
+                "LastEvaluatedKey": ""
+            }
+        }
+
+
+
+    def books(self, storage_id, page=""):
         '''
         This function will download a list of book metadata from QuietThyme.
         '''
 
-        response = RequestManager.create_request('GET', '/book', query_args={'storage_id': storage_id})
+        args = {'storage_id': storage_id}
+        if page != "":
+            args['page'] = page;
+        response = RequestManager.create_request('GET', '/book', query_args=args)
         self.logger.debug(response)
         return response
 
