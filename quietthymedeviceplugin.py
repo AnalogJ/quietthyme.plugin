@@ -7,7 +7,7 @@ __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
 import traceback, os, urllib2, sys, logging
-from os import path
+from calibre_plugins.quietthyme import version
 
 # The class that sets and stores the user configured preferences
 from calibre_plugins.quietthyme.config import prefs
@@ -30,14 +30,6 @@ from calibre.library import current_library_name
 
 logger = logging.getLogger(__name__)
 
-# Parse dynamic version info
-version_tuple = (1, 0, 0)
-def version_parse(v):
-    return tuple(map(int, (v.split("."))))
-with open(path.join(path.dirname(path.abspath(__file__)), 'VERSION')) as version_file:
-    version = version_file.read().strip()
-    version_tuple = version_parse(version)
-
 class QuietthymeDevicePlugin(DevicePlugin):
     '''
     This class is a simple wrapper that provides information about the actual
@@ -52,7 +44,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     description         = 'QuietThyme storage plugin for Calibre'
     supported_platforms = ['windows', 'osx', 'linux']
     author              = 'Jason Kulatunga'
-    version             = version_tuple
+    version             = version.version_tuple
     minimum_calibre_version = (0, 7, 53)
     gui_name = 'QuietThyme Storage'
 
