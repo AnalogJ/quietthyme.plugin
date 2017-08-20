@@ -334,6 +334,9 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         status_response = ApiClient().status(library_uuid, current_library_name())
         if not status_response['success']:
+            # if an error occurs because token is invalid (401) then remove it.
+            if status_response.get('data', {}).get('errorMessage', {}).get('code', 0) == 401:
+                prefs.pop('token', None) #delete the token key.
             raise OpenFeedback(status_response['error_msg'])
         self.is_connected = status_response['success']
             #store the settings in memory

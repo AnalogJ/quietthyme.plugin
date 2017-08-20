@@ -59,7 +59,7 @@ class ConfigWidget(QWidget):
         self.beta_checkbox.setChecked(prefs['beta_mode'])
         self.l.addWidget(self.beta_checkbox)
 
-        self.config_url = QUrl(prefs['web_base']+'/storage/calibre')
+        self.config_url = QUrl(prefs['web_base']+'/storage')
         self.webview = QTWebView(bearer_token=prefs['token'])
 
         self.webview.load(self.config_url)
