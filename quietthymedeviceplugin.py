@@ -135,7 +135,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     #: Set of extensions that are "virtual books" on the device
     #: and therefore cannot be viewed/saved/added to library
     #: For example: ``frozenset(['kobo'])``
-    VIRTUAL_BOOK_EXTENSIONS = []
+    VIRTUAL_BOOK_EXTENSIONS = frozenset({'ignore'})
 
     #: Whether to nuke comments in the copy of the book sent to the device. If
     #: not None this should be short string that the comments will be replaced
@@ -508,7 +508,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         """
         logger.debug(sys._getframe().f_code.co_name)
         card_id = self._convert_oncard_to_cardid(oncard)
-        storage_type = self.qt_settings.get(card_id,{}).get('storage_type',None)
+        storage_type = self.qt_settings.get(card_id,{}).get('storage_type',"")
         storage_id = self.qt_settings.get(card_id,{}).get('storage_id',None)
         if (storage_id is not None) and (storage_type != 'quietthyme'):
             qt_response = ApiClient().books_all(storage_id)['data']
@@ -517,10 +517,26 @@ class QuietthymeDevicePlugin(DevicePlugin):
             qt_booklist = []
 
         booklist = BookList(None, None, None)
+
+        placeholderBook = Book()
+        placeholderBook.title = "## {0} books ##".format(storage_type.capitalize())
+        placeholderBook.authors = ['QuietThyme']
+        placeholderBook.comments = "All Books in this list are actually stored on {0} cloud storage".format(storage_type.capitalize())
+
+        placeholderBook.size = 0
+        placeholderBook.thumbnail = get_resources("images/{0}.png".format(storage_type))
+        placeholderBook.tags = [storage_type]
+        placeholderBook.identifiers = {}
+        placeholderBook.path = "placeholder.ignore"
+
+
+        booklist.add_book(placeholderBook, False)
+
+
         for i, qt_metadata in enumerate(qt_booklist):
             self.report_progress((i+1) / float(len(qt_booklist)), _('Loading books from device...'))
             if qt_metadata['storage_identifier']:
-                logger.debug(qt_metadata)
+                #logger.debug(qt_metadata)
                 booklist.add_book(Book.from_quietthyme_metadata(qt_metadata), False)
         self.report_progress(1.0, _('Loaded book from device'))
         return booklist
@@ -626,6 +642,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
         for i, qt_storage_id in enumerate(paths):
             self.report_progress((i+1) / float(len(paths)), _('Deleting books from QuietThyme...'))
             logger.debug(qt_storage_id)
+            if qt_storage_id == 'placeholder.ignore':
+                continue
             ApiClient().destroy_book(qt_storage_id)
         self.report_progress(1.0, _('Removing books from QuietThyme...'))
 
