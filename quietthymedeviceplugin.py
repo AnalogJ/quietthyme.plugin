@@ -510,7 +510,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         card_id = self._convert_oncard_to_cardid(oncard)
         storage_type = self.qt_settings.get(card_id,{}).get('storage_type',"")
         storage_id = self.qt_settings.get(card_id,{}).get('storage_id',None)
-        if (storage_id is not None) and (storage_type != 'quietthyme'):
+        if storage_id is not None:
             qt_response = ApiClient().books_all(storage_id)['data']
             qt_booklist = qt_response['Items']
         else:
@@ -573,7 +573,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         for i, local_filepath in enumerate(files):
             local_metadata, fname = metadata.next(), names.next()
 
-            qt_book_data = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_id', 0), local_metadata,  replace_file=True)
+            qt_book_data = self._upload_book(local_filepath, self.qt_settings[card_id].get('storage_id', 'quietthyme'), local_metadata,  replace_file=True)
             try:
 
                 if local_metadata.get('cover'):
