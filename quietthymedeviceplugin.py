@@ -123,7 +123,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     path_sep = os.sep
 
     #: Icon for this device
-    icon = 'images/icon.png'
+    icon = get_icons('images/icon.png')
 
     # Encapsulates an annotation fetched from the device
     #UserAnnotation = namedtuple('Annotation','type, value')

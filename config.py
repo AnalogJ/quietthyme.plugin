@@ -201,8 +201,7 @@ class QTNetworkManager(QNetworkAccessManager):
             self.frame_origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
 
         print("Requesting: %s" % request.url())
-        reply = QNetworkAccessManager.createRequest(self,operation, request, data)
-        return reply
+        return super(QTNetworkManager, self).createRequest(operation, request, data)
     #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
     #     reply = QTNetworkReply(self, reply,operation)
     #
