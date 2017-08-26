@@ -75,8 +75,8 @@ class RequestManager(object):
                 elif (r.status == 301 or r.status == 302) and allow_redirects and (location_header != url):
                     logger.info("Redirecting to another url, and continuing request.")
                     return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
-                elif r.status == 401:
-                    logger.info("Recieved a 401 response from QuietThyme API. This token is no longer valid.")
+                elif r.status == 401 or r.status == 403:
+                    logger.info("Recieved a 401/403 response from QuietThyme API. This token is no longer valid.")
                     prefs.pop("token", None)
                     logger.error('Request failed (%s): %s' % (r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())

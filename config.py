@@ -9,10 +9,9 @@ __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox
 
 from calibre.utils.config import JSONConfig
-
 # This is where all preferences for this plugin will be stored
 # Remember that this name (i.e. plugins/quietthyme) is also
 # in a global namespace, so make it as unique as possible.
@@ -30,7 +29,7 @@ prefs.defaults['beta_mode'] = False
 # (String) the access token used to communicate with the quietthyme API
 prefs.defaults['token'] = ''
 
-master_api_base =  'https://api.quietthyme.com/v1'
+master_api_base = 'https://api.quietthyme.com/v1'
 master_web_base = 'https://www.quietthyme.com'
 
 beta_api_base = 'https://api.quietthyme.com/beta'
@@ -92,7 +91,7 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.XSSAuditingEnabled, False)
         self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
 
-        path = QStandardPaths.writableLocation(QStandardPaths.GenericDataLocation)
+        path = QStandardPaths.writableLocation(QStandardPaths.TempLocation)
         self.global_settings.setOfflineStoragePath(path)
         self.global_settings.enablePersistentStorage(path)
         self.global_settings.setLocalStoragePath(path)
@@ -114,7 +113,7 @@ class ConfigWidget(QWidget):
             self.webview.setMinimumSize(QSize(600, 300))
             self.inspector = QWebInspector()
             self.inspector.setMinimumSize(QSize(600, 300))
-            self.inspector.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
+            self.inspector.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
             self.l.addWidget(self.inspector)
             self.inspector.setPage(self.webview.page())
         else:
@@ -136,10 +135,21 @@ class ConfigWidget(QWidget):
         # # If restart needed, inform user
         if self.restart_required:
             print("############# Save Settings -- RESTART REQUIRED")
-        #     do_restart = show_restart_warning('Restart calibre for the changes to be applied.',
-        #                                       parent=self.gui)
-        #     if do_restart:
-        #         self.gui.quit(restart=True)
+            # do_restart = show_restart_warning('Restart calibre for the changes to be applied.',
+            #                                   parent=self.l)
+            # if do_restart:
+            #     self.gui.quit(restart=True)
+
+
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+
+            msg.setText("Restart Required")
+            msg.setInformativeText("A configuration change requires you to restart Calibre, You should do so now,")
+            msg.setWindowTitle("Restart Required")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
 
 
     def validate(self):
@@ -157,7 +167,7 @@ class ConfigWidget(QWidget):
         if self.webview.page().mainFrame().url() == self.config_url:
             print('===== requested url = current url')
             self.webview.page().mainFrame().evaluateJavaScript("""
-            console.log("EVALUDATE JAVASCRIPT")
+            console.log("EVALUATE JAVASCRIPT")
             """)
             token = self.webview.page().mainFrame().evaluateJavaScript("""
             localStorage.getItem('id_token');
