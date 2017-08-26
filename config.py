@@ -9,7 +9,7 @@ __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir
 
 from calibre.utils.config import JSONConfig
 # This is where all preferences for this plugin will be stored
@@ -91,8 +91,17 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.XSSAuditingEnabled, False)
         self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
 
-        path = QStandardPaths.writableLocation(QStandardPaths.TempLocation)
+
+        # ensure that we get a random offline/localstorage/cache path for the brower (so that the localstorage data is not persistent across sessions)
+        path = None
+        while True:
+            potential_path = QTemporaryDir()
+            if potential_path.isValid():
+                path = potential_path.path()
+                break
+
         self.global_settings.setOfflineStoragePath(path)
+        self.global_settings.setOfflineWebApplicationCachePath(path)
         self.global_settings.enablePersistentStorage(path)
         self.global_settings.setLocalStoragePath(path)
 
@@ -122,10 +131,6 @@ class ConfigWidget(QWidget):
                 self.l.removeWidget(self.inspector)
                 self.inspector.setParent(None)
                 self.inspector = None
-
-
-
-
 
 
     def save_settings(self):
@@ -167,13 +172,13 @@ class ConfigWidget(QWidget):
         if self.webview.page().mainFrame().url() == self.config_url:
             print('===== requested url = current url')
             self.webview.page().mainFrame().evaluateJavaScript("""
-            console.log("EVALUATE JAVASCRIPT")
+            console.log("GET LOCALSTORAGE TOKEN")
             """)
             token = self.webview.page().mainFrame().evaluateJavaScript("""
             localStorage.getItem('id_token');
             """)
-            print(token)
-            prefs['token'] = token
+            print("Got JWT Token: %s" % token)
+            self.plugin_prefs.set('token', token)
 
     def _set_restart_required(self, state):
         '''
@@ -198,8 +203,10 @@ class ConfigWidget(QWidget):
 
         # after we reset the token, we need to generate a new QTWebView with the new config, and then reload the login page.
         self.config_url = QUrl(self.plugin_prefs.get('web_base')+'/storage')
+
         self.webview.set_bearer_token(self.plugin_prefs.get('token'))
         self.webview.load(self.config_url)
+
 
     def _debug_mode_changed(self, state):
         print("======== debug mode changed, %s" % (self.debug_checkbox.isChecked()))

@@ -6,7 +6,7 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
-import traceback, os, urllib2, sys, logging, errno
+import traceback, os, urllib2, sys, logging, errno, copy
 from calibre_plugins.quietthyme import version
 
 # The class that sets and stores the user configured preferences
@@ -195,7 +195,8 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         # skip this work if the icon.png has already been extracted.
         if os.path.isfile(os.path.join(images_config_path, 'icon.png')):
-            pass
+            logger.debug("images/icon.png has already been extracted")
+            return
 
         try:
             # try to create the quietthyme config path
@@ -380,12 +381,16 @@ class QuietthymeDevicePlugin(DevicePlugin):
         # else:
         #     prefs['token'] = response['data']['token']
         # self.is_connected = response['success']
-
         status_response = ApiClient().status(library_uuid, current_library_name())
         if not status_response['success']:
             # if an error occurs because token is invalid (401) then remove it.
-            if status_response.get('data', {}).get('errorMessage', {}).get('code', 0) == 401:
-                prefs.pop('token', None) #delete the token key.
+            errorMessage = status_response.get('data', {}).get('errorMessage', {})
+            if errorMessage.get('code', 0) == 401:  #or errorMessage.get('code', 0) == 403:
+                logger.debug("Got 401/403 response when attempting to call status endpoint. Token is expired/invalid. Deleting it.")
+                # if current_token == prefs.get('token'):
+                    # the token hasnt changed, and its invalid, delete it.
+                prefs.pop('token', None)
+
             raise OpenFeedback(status_response['error_msg'])
         self.is_connected = status_response['success']
             #store the settings in memory
@@ -775,6 +780,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         config_widget.save_settings()
         #TODO: is this necessary?
         self.is_connected = False #force plugin to be re-opened after a user closes the config window.
+
 
     def settings(self):
         '''
