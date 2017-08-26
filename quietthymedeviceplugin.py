@@ -6,7 +6,7 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
-import traceback, os, urllib2, sys, logging
+import traceback, os, urllib2, sys, logging, errno
 from calibre_plugins.quietthyme import version
 
 # The class that sets and stores the user configured preferences
@@ -19,6 +19,9 @@ from calibre_plugins.quietthyme.client.api import ApiClient
 
 # The device error classes.
 from calibre.devices.errors import OpenFeedback,OpenFailed
+
+# get the config_directory (where the icon gets extracted to)
+from calibre.constants import config_dir
 
 # The class that all Device plugin wrappers must inherit from
 #  https://github.com/Philantrop/calibre-ios-reader-applications/blob/master/__init__.py
@@ -122,8 +125,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     #: Path separator for paths to books on device
     path_sep = os.sep
 
-    #: Icon for this device
-    icon = 'images/icon.png'
+    icon = os.path.join(config_dir, 'plugins/quietthyme/images/icon.png')
 
     # Encapsulates an annotation fetched from the device
     #UserAnnotation = namedtuple('Annotation','type, value')
@@ -173,6 +175,61 @@ class QuietthymeDevicePlugin(DevicePlugin):
     #: Be careful to not spam the user with too many messages. This variable is checked after *every* callback,
     #: so only set it when you really need to.
     user_feedback_after_callback = None
+
+    def initialize(self):
+        '''
+        Called once when calibre plugins are initialized.  Plugins are
+        re-initialized every time a new plugin is added. Also note that if the
+        plugin is run in a worker process, such as for adding books, then the
+        plugin will be initialized for every new worker process.
+
+        Perform any plugin specific initialization here, such as extracting
+        resources from the plugin ZIP file. The path to the ZIP file is
+        available as ``self.plugin_path``.
+
+        Note that ``self.site_customization`` is **not** available at this point.
+        '''
+        logger.debug(sys._getframe().f_code.co_name)
+
+        images_config_path = os.path.join(config_dir, 'plugins/quietthyme/images')
+
+        # skip this work if the icon.png has already been extracted.
+        if os.path.isfile(os.path.join(images_config_path, 'icon.png')):
+            pass
+
+        try:
+            # try to create the quietthyme config path
+            os.makedirs(images_config_path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(images_config_path):
+                pass
+            else:
+                logger.debug("An error occured during creation of quietthyme/images folder in config directory")
+                pass
+
+        # try to extract the images into the quietthyme config directory.
+        try:
+            # filter out any images that already exist
+
+            logger.debug("trying to extract 'images/icon.png'")
+            extracted_data = self.load_resources('images/icon.png').itervalues().next()
+
+            try:
+                with open(os.path.join(images_config_path, 'icon.png'), 'wb') as f:
+                    f.write(extracted_data)
+            except:
+                logger.debug("An error occured while extracting images/icon.png and saving it to config directory")
+                pass
+
+
+        # we're not really going to fail if any of the image resources fail to extract, as we don't require them
+        # for the plugin to work correctly. so we'll just log the errors and throw them away.
+        except ValueError as e:
+            # load_resources will raise an error if you attempt to extract images from a plugin htats not in zip format.
+            logger.debug("An error occured while retrieving images from plugin zip")
+            logger.debug(e)
+            pass
+
 
     def is_usb_connected(self, devices_on_system, debug=False,
                          only_presence=False):
@@ -716,6 +773,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         '''
         logger.debug(sys._getframe().f_code.co_name)
         config_widget.save_settings()
+        #TODO: is this necessary?
         self.is_connected = False #force plugin to be re-opened after a user closes the config window.
 
     def settings(self):
@@ -889,6 +947,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         This method can be called on the GUI thread. A driver that implements
         this method must be thread safe.
         '''
+        # self.icon = get_icons('images/icon.png')
         logger.debug(sys._getframe().f_code.co_name)
         pass
 

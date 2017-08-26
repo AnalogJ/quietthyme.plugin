@@ -9,10 +9,9 @@ __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox
 
 from calibre.utils.config import JSONConfig
-
 # This is where all preferences for this plugin will be stored
 # Remember that this name (i.e. plugins/quietthyme) is also
 # in a global namespace, so make it as unique as possible.
@@ -27,40 +26,56 @@ prefs.defaults['debug_mode'] = False
 # determines if the plugin communicates with beta or master
 prefs.defaults['beta_mode'] = False
 
-beta_api_base = 'https://api.quietthyme.com/beta'
-beta_web_base = 'https://beta.quietthyme.com'
+# (String) the access token used to communicate with the quietthyme API
+prefs.defaults['token'] = ''
 
 master_api_base = 'https://api.quietthyme.com/v1'
 master_web_base = 'https://www.quietthyme.com'
 
-if prefs['beta_mode']:
-    prefs.defaults['api_base'] = beta_api_base
-    prefs.defaults['web_base'] = beta_web_base
-else:
-    prefs.defaults['api_base'] = master_api_base
-    prefs.defaults['web_base'] = master_web_base
+beta_api_base = 'https://api.quietthyme.com/beta'
+beta_web_base = 'https://beta.quietthyme.com'
 
-# (String) the access token used to communicate with the quietthyme API
-prefs.defaults['token'] = ''
+# default endpoint information should point to Production service.
+prefs.defaults['api_base'] = 'https://api.quietthyme.com/v1'
+prefs.defaults['web_base'] = 'https://www.quietthyme.com'
+
+
+if prefs['beta_mode']:
+    prefs['api_base'] = beta_api_base
+    prefs['web_base'] = beta_web_base
+else:
+    prefs['api_base'] = master_api_base
+    prefs['web_base'] = master_web_base
+
+
 
 class ConfigWidget(QWidget):
 
     def __init__(self):
+        self.plugin_prefs = prefs
+        self.restart_required = False
+        self.inspector = None
+
         QWidget.__init__(self)
         self.l = QVBoxLayout()
         self.setLayout(self.l)
 
         #add checkbox
-        self.debug_checkbox = QCheckBox('Debug Mode')
-        self.debug_checkbox.setChecked(prefs['debug_mode'])
+        self.debug_checkbox = QCheckBox('Debug Mode - Preferences')
+        self.debug_checkbox.setChecked(self.plugin_prefs.get('debug_mode', False))
+        self.debug_checkbox.stateChanged.connect(self._debug_mode_changed)
+        self.debug_checkbox.setToolTip('Enable Javascript Console for debugging WebView requests to QuietThyme API')
         self.l.addWidget(self.debug_checkbox)
 
         self.beta_checkbox = QCheckBox('Beta Mode')
-        self.beta_checkbox.setChecked(prefs['beta_mode'])
+        self.beta_checkbox.setChecked(self.plugin_prefs.get('beta_mode', False))
+        self.beta_checkbox.stateChanged.connect(self._set_restart_required)
+        self.beta_checkbox.stateChanged.connect(self._beta_mode_changed)
+        self.beta_checkbox.setToolTip('Tell Calibre to communicate with the Beta version of QuietThyme')
         self.l.addWidget(self.beta_checkbox)
 
-        self.config_url = QUrl(prefs['web_base']+'/storage')
-        self.webview = QTWebView(bearer_token=prefs['token'])
+        self.config_url = QUrl(self.plugin_prefs.get('web_base')+'/storage')
+        self.webview = QTWebView(bearer_token=self.plugin_prefs.get('token'))
 
         self.webview.load(self.config_url)
         self.global_settings = self.webview.page().settings() #QWebSettings.globalSettings()
@@ -76,40 +91,70 @@ class ConfigWidget(QWidget):
         self.global_settings.setAttribute(QWebSettings.XSSAuditingEnabled, False)
         self.global_settings.setAttribute(QWebSettings.DeveloperExtrasEnabled, True)
 
-        path = QStandardPaths.writableLocation(QStandardPaths.GenericDataLocation)
+        path = QStandardPaths.writableLocation(QStandardPaths.TempLocation)
         self.global_settings.setOfflineStoragePath(path)
         self.global_settings.enablePersistentStorage(path)
         self.global_settings.setLocalStoragePath(path)
 
-
-        if prefs['debug_mode']:
-            self.webview.setMinimumSize(QSize(600, 300))
-        else:
-            self.webview.setMinimumSize(QSize(600, 600))
-
         self.webview.show()
         self.l.addWidget(self.webview)
 
-        if prefs['debug_mode']:
-            self.inspector = QWebInspector()
-            self.inspector.setMinimumSize(QSize(600, 300))
-            self.inspector.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
-
-            self.l.addWidget(self.inspector)
-            self.inspector.setPage(self.webview.page())
+        self.configure_webview_inspector_ui()
 
         self.webview.urlChanged.connect(self._url_changed)
         self.webview.loadFinished.connect(self._load_finished)
 
 
-    def save_settings(self):
-        prefs['debug_mode'] = self.debug_checkbox.isChecked()
+    ################################################################################################################
+    # Configure UI methods
+    #
+    def configure_webview_inspector_ui(self):
+        if self.plugin_prefs.get('debug_mode'):
+            self.webview.setMinimumSize(QSize(600, 300))
+            self.inspector = QWebInspector()
+            self.inspector.setMinimumSize(QSize(600, 300))
+            self.inspector.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+            self.l.addWidget(self.inspector)
+            self.inspector.setPage(self.webview.page())
+        else:
+            self.webview.setMinimumSize(QSize(600, 600))
+            if self.inspector is not None:
+                self.l.removeWidget(self.inspector)
+                self.inspector.setParent(None)
+                self.inspector = None
 
-        prefs['beta_mode'] = self.beta_checkbox.isChecked()
+
+
+
+
+
+    def save_settings(self):
+        self.plugin_prefs.set('debug_mode', self.debug_checkbox.isChecked())
+        self.plugin_prefs.set('beta_mode', self.beta_checkbox.isChecked())
+
+        # # If restart needed, inform user
+        if self.restart_required:
+            print("############# Save Settings -- RESTART REQUIRED")
+            # do_restart = show_restart_warning('Restart calibre for the changes to be applied.',
+            #                                   parent=self.l)
+            # if do_restart:
+            #     self.gui.quit(restart=True)
+
+
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+
+            msg.setText("Restart Required")
+            msg.setInformativeText("A configuration change requires you to restart Calibre, You should do so now,")
+            msg.setWindowTitle("Restart Required")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
 
 
     def validate(self):
         return True #self.webview.page().mainFrame().url() == self.config_url
+
 
     ################################################################################################################
     # Event Handlers
@@ -122,7 +167,7 @@ class ConfigWidget(QWidget):
         if self.webview.page().mainFrame().url() == self.config_url:
             print('===== requested url = current url')
             self.webview.page().mainFrame().evaluateJavaScript("""
-            console.log("EVALUDATE JAVASCRIPT")
+            console.log("EVALUATE JAVASCRIPT")
             """)
             token = self.webview.page().mainFrame().evaluateJavaScript("""
             localStorage.getItem('id_token');
@@ -130,6 +175,36 @@ class ConfigWidget(QWidget):
             print(token)
             prefs['token'] = token
 
+    def _set_restart_required(self, state):
+        '''
+        Set restart_required flag to show show dialog when closing dialog
+        '''
+
+        print("======== setting changes, restart required")
+        self.restart_required = True
+
+    def _beta_mode_changed(self, state):
+        print("======== beta mode changed, %s" % (self.beta_checkbox.isChecked()))
+        self.plugin_prefs.set('beta_mode', self.beta_checkbox.isChecked())
+
+        # if the beta mode has changed, we need to reset the api endpoints, and then wipe the token (not valid between envs)
+        self.plugin_prefs.set('token', '')
+        if self.plugin_prefs.get('beta_mode'):
+            self.plugin_prefs.set('api_base', beta_api_base)
+            self.plugin_prefs.set('web_base', beta_web_base)
+        else:
+            self.plugin_prefs.set('api_base', master_api_base)
+            self.plugin_prefs.set('web_base', master_web_base)
+
+        # after we reset the token, we need to generate a new QTWebView with the new config, and then reload the login page.
+        self.config_url = QUrl(self.plugin_prefs.get('web_base')+'/storage')
+        self.webview.set_bearer_token(self.plugin_prefs.get('token'))
+        self.webview.load(self.config_url)
+
+    def _debug_mode_changed(self, state):
+        print("======== debug mode changed, %s" % (self.debug_checkbox.isChecked()))
+        self.plugin_prefs.set('debug_mode', self.debug_checkbox.isChecked())
+        self.configure_webview_inspector_ui()
 
 class QTWebView(QWebView):
 
@@ -138,6 +213,10 @@ class QTWebView(QWebView):
         page = QTWebPage(bearer_token=bearer_token)
         self.setPage(page)
         #TODO: if token is invalid, show a landing page.
+
+    def set_bearer_token(self, bearer_token=None):
+        self.bearer_token = bearer_token
+        self.page().set_bearer_token(bearer_token)
 
 
 class QTWebPage(QWebPage):
@@ -151,6 +230,10 @@ class QTWebPage(QWebPage):
     # def userAgentForUrl(self, url):
     #     """ Returns a User Agent that will be seen by the website. """
     #     return "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
+
+    def set_bearer_token(self, bearer_token=None):
+        self.bearer_token = bearer_token
+        self.nam.set_bearer_token(bearer_token)
 
     def javaScriptConsoleMessage(self, msg, lineNumber, sourceID):
         if prefs['debug_mode']:
@@ -175,6 +258,9 @@ class QTNetworkManager(QNetworkAccessManager):
         self.bearer_token = bearer_token
         self.sslErrors.connect(self._ssl_errors)
         self.frame_origin = frame_origin
+
+    def set_bearer_token(self, bearer_token=None):
+        self.bearer_token = bearer_token
 
     def createRequest(self, operation, request, data):
         request_host = request.url().host()
@@ -201,8 +287,7 @@ class QTNetworkManager(QNetworkAccessManager):
             self.frame_origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
 
         print("Requesting: %s" % request.url())
-        reply = QNetworkAccessManager.createRequest(self,operation, request, data)
-        return reply
+        return super(QTNetworkManager, self).createRequest(operation, request, data)
     #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
     #     reply = QTNetworkReply(self, reply,operation)
     #
@@ -333,3 +418,19 @@ class QTNetworkManager(QNetworkAccessManager):
 #         data, self.buffer = self.buffer[:size], self.buffer[size:]
 #         return str(data)
 #
+
+
+
+# For testing ConfigWidget, run from command line:
+# cd ~/Documents/calibredev/Marvin_Manager
+# calibre-debug config.py
+# Search 'Marvin'
+if __name__ == '__main__':
+    try:
+        from PyQt5.Qt import QApplication
+    except ImportError:
+        from PyQt4.Qt import QApplication
+
+    from calibre.gui2.preferences import test_widget
+    app = QApplication([])
+    test_widget('Advanced', 'Plugins')
