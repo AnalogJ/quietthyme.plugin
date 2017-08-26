@@ -17,7 +17,6 @@ __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
 class RequestManager(object):
-    api_base = prefs['api_base']
 
     @classmethod
     def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0, external_request=False):
@@ -36,7 +35,7 @@ class RequestManager(object):
                 raise Exception("Redirected "+redirect_depth+" times, giving up.")
             url = endpoint
         else:
-            url = RequestManager.api_base + endpoint
+            url = prefs['api_base'] + endpoint
 
             if json_data:
                 clen = len(json_data)
@@ -75,13 +74,13 @@ class RequestManager(object):
                 elif (r.status == 301 or r.status == 302) and allow_redirects and (location_header != url):
                     logger.info("Redirecting to another url, and continuing request.")
                     return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
-                elif r.status == 401 or r.status == 403:
+                elif r.status == 401: #or r.status == 403:
                     logger.info("Recieved a 401/403 response from QuietThyme API. This token is no longer valid.")
                     prefs.pop("token", None)
-                    logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                    logger.error('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())
                 else:
-                    logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                    logger.error('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())
             except Exception, e:
                 logger.error(e)
@@ -117,7 +116,7 @@ class RequestManager(object):
         try:
             r = http.getresponse()
             if r.status == 200:
-                logger.debug('Request successful (%s): %s' % (r.status, r.reason))
+                logger.debug('Request create_signed_file_request successful (%s): %s' % (r.status, r.reason))
 
                 if json_response:
                     data = r.read()
@@ -126,7 +125,7 @@ class RequestManager(object):
                 else:
                     return r.read()
             else:
-                logger.error('Request failed (%s): %s' % (r.status, r.reason))
+                logger.error('Request create_signed_file_request failed (%s): %s' % (r.status, r.reason))
                 logger.error('Response headers: %s' % r.getheaders())
                 logger.error('Response data: %s' % r.read())
         except Exception, e:
@@ -168,7 +167,7 @@ class RequestManager(object):
                 raise Exception("The file was not found")
 
         # Build the request
-        url = RequestManager.api_base + endpoint
+        url = prefs['api_base'] + endpoint
         schema, netloc, url, params, query, fragments = \
             urlparse.urlparse(url)
 
