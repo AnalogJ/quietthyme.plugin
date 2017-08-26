@@ -193,11 +193,6 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         images_config_path = os.path.join(config_dir, 'plugins/quietthyme/images')
 
-        # skip this work if the icon.png has already been extracted.
-        if os.path.isfile(os.path.join(images_config_path, 'icon.png')):
-            logger.debug("images/icon.png has already been extracted")
-            return
-
         try:
             # try to create the quietthyme config path
             os.makedirs(images_config_path)
@@ -205,7 +200,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
             if exc.errno == errno.EEXIST and os.path.isdir(images_config_path):
                 pass
             else:
-                logger.debug("An error occured during creation of quietthyme/images folder in config directory")
+                logger.debug("An error occured during creation of quietthyme/images folder in config directory.")
                 pass
 
         # try to extract the images into the quietthyme config directory.
@@ -216,10 +211,12 @@ class QuietthymeDevicePlugin(DevicePlugin):
             extracted_data = self.load_resources('images/icon.png').itervalues().next()
 
             try:
-                with open(os.path.join(images_config_path, 'icon.png'), 'wb') as f:
+
+                fd = os.open(os.path.join(images_config_path, 'icon.png'), os.O_RDWR | os.O_CREAT | os.O_EXCL)
+                with os.fdopen(fd, 'wb') as f:
                     f.write(extracted_data)
             except:
-                logger.debug("An error occured while extracting images/icon.png and saving it to config directory")
+                logger.debug("An error occured while extracting images/icon.png and saving it to config directory.The icon may already exist, ignoring.")
                 pass
 
 
