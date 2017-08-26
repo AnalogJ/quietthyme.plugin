@@ -11,7 +11,7 @@ This is an open source device driver plugin + web server for Calibre.
 ## Screenshots
 Here's a quick gif of what you can do with the QuietThyme plugin for Calibre
 
-![](https://raw.githubusercontent.com/AnalogJ/quietthyme.web.src/gh-pages/assets/uservoice/QuietThyme-Library-Manual-Upload.gif)
+![](https://cdn.rawgit.com/AnalogJ/quietthyme.web.src/gh-pages/assets/uservoice/QuietThyme-Calibre-Upload-Books.gif)
 
 ## Storage Providers:
 
