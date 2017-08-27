@@ -10,8 +10,9 @@ __docformat__ = 'restructuredtext en'
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
     QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
     QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir
-
+import logging, sys
 from calibre.utils.config import JSONConfig
+logger = logging.getLogger(__name__)
 # This is where all preferences for this plugin will be stored
 # Remember that this name (i.e. plugins/quietthyme) is also
 # in a global namespace, so make it as unique as possible.
@@ -20,8 +21,10 @@ from calibre.utils.config import JSONConfig
 prefs = JSONConfig('plugins/quietthyme')
 
 # Set defaults
-# determines if the plugin logger is enabled.
-prefs.defaults['debug_mode'] = False
+# determines if the web inspector panel is enabled is enabled.
+prefs.defaults['inspector_enabled'] = False
+
+prefs.defaults['log_level'] = 'INFO'
 
 # determines if the plugin communicates with beta or master
 prefs.defaults['beta_mode'] = False
@@ -61,11 +64,11 @@ class ConfigWidget(QWidget):
         self.setLayout(self.l)
 
         #add checkbox
-        self.debug_checkbox = QCheckBox('Debug Mode - Preferences')
-        self.debug_checkbox.setChecked(self.plugin_prefs.get('debug_mode', False))
-        self.debug_checkbox.stateChanged.connect(self._debug_mode_changed)
-        self.debug_checkbox.setToolTip('Enable Javascript Console for debugging WebView requests to QuietThyme API')
-        self.l.addWidget(self.debug_checkbox)
+        self.inspector_checkbox = QCheckBox('Show Inspector')
+        self.inspector_checkbox.setChecked(self.plugin_prefs.get('inspector_enabled', False))
+        self.inspector_checkbox.stateChanged.connect(self._inspector_enabled_changed)
+        self.inspector_checkbox.setToolTip('Enable Javascript Console for debugging WebView requests to QuietThyme API')
+        self.l.addWidget(self.inspector_checkbox)
 
         self.beta_checkbox = QCheckBox('Beta Mode')
         self.beta_checkbox.setChecked(self.plugin_prefs.get('beta_mode', False))
@@ -118,7 +121,7 @@ class ConfigWidget(QWidget):
     # Configure UI methods
     #
     def configure_webview_inspector_ui(self):
-        if self.plugin_prefs.get('debug_mode'):
+        if self.plugin_prefs.get('inspector_enabled'):
             self.webview.setMinimumSize(QSize(600, 300))
             self.inspector = QWebInspector()
             self.inspector.setMinimumSize(QSize(600, 300))
@@ -134,17 +137,17 @@ class ConfigWidget(QWidget):
 
 
     def save_settings(self):
-        self.plugin_prefs.set('debug_mode', self.debug_checkbox.isChecked())
+        self.plugin_prefs.set('inspector_enabled', self.inspector_checkbox.isChecked())
         self.plugin_prefs.set('beta_mode', self.beta_checkbox.isChecked())
 
         # # If restart needed, inform user
         if self.restart_required:
-            print("############# Save Settings -- RESTART REQUIRED")
             # do_restart = show_restart_warning('Restart calibre for the changes to be applied.',
             #                                   parent=self.l)
             # if do_restart:
             #     self.gui.quit(restart=True)
 
+            # TODO: figure out if theres a way to call self.gui.quit()
 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
@@ -158,26 +161,27 @@ class ConfigWidget(QWidget):
 
 
     def validate(self):
-        return True #self.webview.page().mainFrame().url() == self.config_url
+        # TODO: validate the that the api_endpoint and web endpoint are valid urls.
+        return True
 
 
     ################################################################################################################
     # Event Handlers
     #
     def _url_changed(self, url):
-        print('======== url changed: ', url)
+        logger.debug(sys._getframe().f_code.co_name, url)
 
     def _load_finished(self, ok):
-        print('========== load finished, ok: ', ok)
+        logger.debug(sys._getframe().f_code.co_name, ok)
         if self.webview.page().mainFrame().url() == self.config_url:
-            print('===== requested url = current url')
+            logger.debug("Loading finished and the url is the same as the desired destination url, ", self.config_url)
             self.webview.page().mainFrame().evaluateJavaScript("""
             console.log("GET LOCALSTORAGE TOKEN")
             """)
             token = self.webview.page().mainFrame().evaluateJavaScript("""
             localStorage.getItem('id_token');
             """)
-            print("Got JWT Token: %s" % token)
+            logger.debug("Got JWT Token", token)
             self.plugin_prefs.set('token', token)
 
     def _set_restart_required(self, state):
@@ -185,11 +189,11 @@ class ConfigWidget(QWidget):
         Set restart_required flag to show show dialog when closing dialog
         '''
 
-        print("======== setting changes, restart required")
+        logger.debug(sys._getframe().f_code.co_name, "restart required")
         self.restart_required = True
 
     def _beta_mode_changed(self, state):
-        print("======== beta mode changed, %s" % (self.beta_checkbox.isChecked()))
+        logger.debug(sys._getframe().f_code.co_name, self.beta_checkbox.isChecked())
         self.plugin_prefs.set('beta_mode', self.beta_checkbox.isChecked())
 
         # if the beta mode has changed, we need to reset the api endpoints, and then wipe the token (not valid between envs)
@@ -208,9 +212,9 @@ class ConfigWidget(QWidget):
         self.webview.load(self.config_url)
 
 
-    def _debug_mode_changed(self, state):
-        print("======== debug mode changed, %s" % (self.debug_checkbox.isChecked()))
-        self.plugin_prefs.set('debug_mode', self.debug_checkbox.isChecked())
+    def _inspector_enabled_changed(self, state):
+        logger.debug(sys._getframe().f_code.co_name, self.inspector_checkbox.isChecked())
+        self.plugin_prefs.set('inspector_enabled', self.inspector_checkbox.isChecked())
         self.configure_webview_inspector_ui()
 
 class QTWebView(QWebView):
@@ -219,7 +223,6 @@ class QTWebView(QWebView):
         super(QWebView,self).__init__(parent)
         page = QTWebPage(bearer_token=bearer_token)
         self.setPage(page)
-        #TODO: if token is invalid, show a landing page.
 
     def set_bearer_token(self, bearer_token=None):
         self.bearer_token = bearer_token
@@ -243,14 +246,13 @@ class QTWebPage(QWebPage):
         self.nam.set_bearer_token(bearer_token)
 
     def javaScriptConsoleMessage(self, msg, lineNumber, sourceID):
-        if prefs['debug_mode']:
-            print("JsConsole(%s:%d): %s" % (sourceID, lineNumber, msg))
+        logger.debug(sys._getframe().f_code.co_name, "(%s:%d): %s" % (sourceID, lineNumber, msg))
 
     def acceptNavigationRequest(self, frame, request, type):
-        print("NavReq: %s: %s " % (request.url(), type))
+        logger.debug(sys._getframe().f_code.co_name, request.url(), type)
 
         origin = frame.securityOrigin()
-        print("Setting new Security Origin: %s " % origin.host())
+        logger.debug("Setting new security origin", origin.host())
 
         self.nam = QTNetworkManager(bearer_token=self.bearer_token,frame_origin=origin)
         self.setNetworkAccessManager(self.nam)
@@ -270,12 +272,14 @@ class QTNetworkManager(QNetworkAccessManager):
         self.bearer_token = bearer_token
 
     def createRequest(self, operation, request, data):
+        logger.debug(sys._getframe().f_code.co_name)
+
         request_host = request.url().host()
         request_path = request.url().path()
         quietthyme_host = QUrl(prefs['web_base']).host()
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
-            print("Adding QT Auth header: %s", request.url())
+            logger.debug("Adding QT Auth header", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
         if quietthyme_host == request_host:
@@ -293,7 +297,8 @@ class QTNetworkManager(QNetworkAccessManager):
             self.frame_origin.addAccessWhitelistEntry("https", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
             self.frame_origin.addAccessWhitelistEntry("http", request.url().host(), QWebSecurityOrigin.AllowSubdomains)
 
-        print("Requesting: %s" % request.url())
+        logger.debug("Requesting:", request.url())
+
         return super(QTNetworkManager, self).createRequest(operation, request, data)
     #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
     #     reply = QTNetworkReply(self, reply,operation)
@@ -315,7 +320,7 @@ class QTNetworkManager(QNetworkAccessManager):
     ################################################################################################################
     # Event Handlers
     def _ssl_errors(self,reply, errors):
-        print ("SSL error occured while requesting: %s . Will try to ignore" % reply.url())
+        logger.debug("SSL error occured while requesting: %s . Will try to ignore" % reply.url())
         reply.ignoreSslErrors()
 
 # class QTNetworkReply(QNetworkReply):

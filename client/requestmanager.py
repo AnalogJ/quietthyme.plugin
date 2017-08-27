@@ -16,11 +16,12 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
+logger = logging.getLogger(__name__)
+
 class RequestManager(object):
 
     @classmethod
     def create_request(cls, action, endpoint='/', query_args=None, json_data='', json_response=True, allow_redirects=False, redirect_depth=0, external_request=False):
-        logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
 
         headers = {}
@@ -52,7 +53,7 @@ class RequestManager(object):
             encoded_args = urllib.urlencode(query_args)
             path += "?" + encoded_args
 
-        logger.info('Requesting url: %s %s %s' % (schema, domain, path))
+        logger.info('Requesting url: %s %s %s %s' % (action, schema, domain, path))
         try:
 
             http = httplib.HTTPSConnection(domain)
@@ -63,7 +64,7 @@ class RequestManager(object):
                 r = http.getresponse()
                 location_header = r.getheader('Location')
                 if r.status == 200:
-                    logger.debug('Request successful (%s): %s' % (r.status, r.reason))
+                    logger.info('Request successful (%s): %s' % (r.status, r.reason))
 
                     if json_response:
                         data = r.read()
@@ -75,12 +76,12 @@ class RequestManager(object):
                     logger.info("Redirecting to another url, and continuing request.")
                     return RequestManager.create_request('GET', location_header, json_response=json_response, allow_redirects=True, redirect_depth = (redirect_depth +1))
                 elif r.status == 401: #or r.status == 403:
-                    logger.info("Recieved a 401/403 response from QuietThyme API. This token is no longer valid.")
+                    logger.warning("Recieved a 401/403 response from QuietThyme API. This token is no longer valid.")
                     prefs.pop("token", None)
-                    logger.error('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
+                    logger.warning('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())
                 else:
-                    logger.error('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
+                    logger.warning('Request create_request failed %s (%s): %s' % (url, r.status, r.reason))
                     logger.error('Response headers: %s' % r.getheaders())
             except Exception, e:
                 logger.error(e)
@@ -94,7 +95,6 @@ class RequestManager(object):
 
     @classmethod
     def create_signed_file_request(self, url, filepath, json_response=False):
-        logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
 
         headers = {
@@ -144,7 +144,6 @@ class RequestManager(object):
         :param filepath_fields: key=fieldname, value=filepath for file that will be uploaded
         :return: response
         """
-        logger = logging.getLogger(__name__)
         logger.debug(sys._getframe().f_code.co_name)
         if not query_args:
             query_args = {}
@@ -205,7 +204,7 @@ class MultiPartForm(object):
         self.form_fields = []
         self.files = []
         self.boundary = mimetools.choose_boundary()
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         return
 
     def get_content_type(self):

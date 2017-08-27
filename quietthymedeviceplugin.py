@@ -138,7 +138,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
     #: and therefore cannot be viewed/saved/added to library
     #: For example: ``frozenset(['kobo'])``
     VIRTUAL_BOOK_EXTENSIONS = frozenset({'ignore'})
-
+    VIRTUAL_BOOK_EXTENSION_MESSAGE = 'This is not a real book, it just identifies the cloud storage location for books in this list'
     #: Whether to nuke comments in the copy of the book sent to the device. If
     #: not None this should be short string that the comments will be replaced
     #: by.
@@ -193,6 +193,9 @@ class QuietthymeDevicePlugin(DevicePlugin):
 
         images_config_path = os.path.join(config_dir, 'plugins/quietthyme/images')
 
+        if os.path.isfile(os.path.join(images_config_path, 'icon.png')):
+            return
+
         try:
             # try to create the quietthyme config path
             os.makedirs(images_config_path)
@@ -208,13 +211,15 @@ class QuietthymeDevicePlugin(DevicePlugin):
             # filter out any images that already exist
 
             logger.debug("trying to extract 'images/icon.png'")
-            extracted_data = self.load_resources('images/icon.png').itervalues().next()
-
+            extracted_data = self.load_resources('images/icon.png')
+            logger.debug("Found Resources: %s" % extracted_data.keys() )
+            icon_data = extracted_data.get('images/icon.png', None)
             try:
-
-                fd = os.open(os.path.join(images_config_path, 'icon.png'), os.O_RDWR | os.O_CREAT | os.O_EXCL)
-                with os.fdopen(fd, 'wb') as f:
-                    f.write(extracted_data)
+                #do an exclusive open/write because of race conditions
+                if icon_data:
+                    fd = os.open(os.path.join(images_config_path, 'icon.png'), os.O_RDWR | os.O_CREAT | os.O_EXCL)
+                    with os.fdopen(fd, 'wb') as f:
+                        f.write(icon_data)
             except:
                 logger.debug("An error occured while extracting images/icon.png and saving it to config directory.The icon may already exist, ignoring.")
                 pass

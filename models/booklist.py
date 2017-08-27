@@ -2,7 +2,9 @@ __license__   = 'GPL v3'
 __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
+import logging
 from calibre.devices.interface import BookList as _BookList
+logger = logging.getLogger(__name__)
 class BookList(_BookList):
 
     def __init__(self, oncard, prefix, settings):

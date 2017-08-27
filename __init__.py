@@ -25,11 +25,14 @@ ch.setLevel(logging.WARN)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 ch.setFormatter(formatter)
 
-if prefs['debug_mode']:
-    logger.setLevel(logging.DEBUG)
-    ch.setLevel(logging.DEBUG)
-    #add log to file channel.
-    #TODO: make this os agnostic using tempfile.gettempdir() and path.
+
+log_level = logging.getLevelName(prefs.get('log_level', "INFO"))
+logger.setLevel(log_level)
+ch.setLevel(log_level)
+
+# if the log_level is DEBUG, make sure we also store the log persistently
+if log_level == logging.DEBUG:
+    # TODO: make this os agnostic using tempfile.gettempdir() and path.
     fh = logging.FileHandler('/tmp/plugin.quietthyme.calibre.log', 'w')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
