@@ -1,1 +1,1 @@
-version_tuple = (1, 0, 18)
+version_tuple = (1, 0, 19)
