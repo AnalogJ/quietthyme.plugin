@@ -1105,7 +1105,7 @@ class QuietthymeDevicePlugin(DevicePlugin):
         # so that the cover is always available.
         qt_filename = self._create_upload_path('', local_metadata, local_metadata.get('cover'))
 
-        qt_upload_data = ApiClient().prepare_cover_storage(qt_book_data["id"], qt_filename)
+        qt_upload_data = ApiClient(logger).prepare_cover_storage(qt_book_data["id"], qt_filename)
         qt_book_data.update(qt_upload_data['data']['book_data'])
 
 

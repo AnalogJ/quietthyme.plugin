@@ -3,15 +3,16 @@ __copyright__ = '2015, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
 
-import os, re, time, sys
+import os, re, time, sys, logging
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.ebooks.metadata import title_sort
+
+logger = logging.getLogger(__name__)
 
 class Book(Metadata):
 
     def __init__(self):
         Metadata.__init__(self, '')
-
         self._new_book = False
 
         self.size = 0
