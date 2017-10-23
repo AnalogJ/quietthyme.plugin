@@ -2,3 +2,5 @@
 .idea
 .cache
 /quietthyme_plugin.zip
+/test.py
+/test_*.py

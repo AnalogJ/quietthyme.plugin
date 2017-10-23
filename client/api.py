@@ -95,7 +95,7 @@ class ApiClient():
         #series
         if local_metadata.series:
             qt_metadata['series_name'] = local_metadata.series.strip()
-            qt_metadata['series_number'] = local_metadata.series_index
+            qt_metadata['series_number'] = str(local_metadata.series_index)
 
 
         json_data = json.dumps(qt_metadata, sort_keys=True,indent=4, separators=(',', ': '))
