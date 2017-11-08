@@ -8,8 +8,14 @@ __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
-    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir
+    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, QSslError, \
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir, QRegExp
+
+from PyQt5.QtCore import QT_VERSION_STR
+from PyQt5.Qt import PYQT_VERSION_STR
+from sip import SIP_VERSION_STR
+import ssl
+
 import logging, sys
 from calibre.utils.config import JSONConfig
 logger = logging.getLogger(__name__)
@@ -268,25 +274,89 @@ class QTNetworkManager(QNetworkAccessManager):
         self.sslErrors.connect(self._ssl_errors)
         self.frame_origin = frame_origin
 
+        # set SSL configuration
+        # sslCfg = QSslConfiguration.defaultConfiguration()
+        # logger.debug(sys._getframe().f_code.co_name, sslCfg.protocol(), type)
+        # sslCfg.setPeerVerifyMode(QSslSocket.VerifyNone)
+        # sslCfg.setProtocol(2)
+        #
+        # QSslConfiguration.setDefaultConfiguration(sslCfg)
+
+        sslConfig = QSslConfiguration.defaultConfiguration()
+        sslConfig.setProtocol(QSsl.SslV3)
+        sslConfig.setPeerVerifyDepth(1)
+        sslConfig.setPeerVerifyMode(QSslSocket.VerifyNone)
+        sslConfig.setSslOption(QSsl.SslOptionDisableServerNameIndication, False)
+        sslConfig.setSslOption(QSsl.SslOptionDisableLegacyRenegotiation, False)
+        # sslConfig.setSslOption(QSsl.SslOptionDisableServerCipherPreference, False)
+
+        # sslConfig.setProtocol(2)
+
+        #certs = sslConfig.caCertificates()
+        #certs.append(QSslCertificate.fromData("CaCertificates"))
+        # QSslSocket.addDefaultCaCertificates(QSslCertificate.fromData("CaCertificates"))
+        QSslConfiguration.setDefaultConfiguration(sslConfig)
+
+
     def set_bearer_token(self, bearer_token=None):
         self.bearer_token = bearer_token
 
     def createRequest(self, operation, request, data):
         logger.debug(sys._getframe().f_code.co_name)
+        logger.debug("BEFORE BASE")
+
 
         request_host = request.url().host()
         request_path = request.url().path()
+
         quietthyme_host = QUrl(prefs['web_base']).host()
+        logger.debug("AFTER BASE")
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             logger.debug("Adding QT Auth header", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
-        if quietthyme_host == request_host:
-            #TODO Huge hack. only because QT5 cant seeem to consistently communicate over SSL when using sni. ie cloudflare.
-            url = request.url()
-            url.setScheme('http')
-            request.setUrl(url)
+        #if quietthyme_host == request_host:
+        logger.debug('Befpre Confire')
+
+        sslCfg = QSslConfiguration.defaultConfiguration()
+        logger.debug('getting SSL CONFIG TLS1')
+        # sslCfg.setPeerVerifyDepth(0)
+        sslCfg.setPeerVerifyMode(QSslSocket.QueryPeer)
+        # sslCfg.setPeerVerifyName('sni76592.cloudflaressl.com')
+        sslCfg.setProtocol(QSsl.TlsV1_0)
+        sslCfg.setSslOption(QSsl.SslOptionDisableServerNameIndication, False)
+        sslCfg.setSslOption(QSsl.SslOptionDisableLegacyRenegotiation, False)
+        # sslCfg.setSslOption(QSsl.SslOptionDisableServerCipherPreference, False)
+        # certs = sslCfg.caCertificates()
+        # certs.append(QSslCertificate.fromData("CaCertificates"))
+        # sslCfg.setCaCertificates(certs)
+
+        certs = QSslSocket.systemCaCertificates()
+        # bundle = QSslCertificate.fromPath("/Users/jason/repos/quietthyme.plugin/quietthyme.bundle.pem", QSsl.Pem, QRegExp.Wildcard)
+        # certs += bundle
+        # logger.debug(QSslCertificate.verify(bundle, 'beta.quietthyme.com'))
+
+        sslCfg.setCaCertificates(certs)
+
+
+        request.setSslConfiguration(sslCfg)
+        logger.debug('AFTER Confire')
+
+        logger.debug('SUPPORTS SSL %s' % QSslSocket.supportsSsl())
+        logger.debug("Qt version: %s"  % QT_VERSION_STR)
+        logger.debug("PyQt version: %s"  % PYQT_VERSION_STR)
+        logger.debug("SIP version: %s"  % SIP_VERSION_STR)
+        logger.debug("OpenSSL version: %s"  % ssl.OPENSSL_VERSION)
+        logger.debug("PROTOCOL: %s" % sslCfg.protocol())
+        logger.debug("Verify bundle: ")
+
+
+
+        #     #TODO Huge hack. only because QT5 cant seeem to consistently communicate over SSL when using sni. ie cloudflare.
+        #     url = request.url()
+        #     url.setScheme('http')
+        #     request.setUrl(url)
 
         if self.frame_origin:
             #adding the current resource request to the security origin witelist.
@@ -299,8 +369,44 @@ class QTNetworkManager(QNetworkAccessManager):
 
         logger.debug("Requesting:", request.url())
 
-        return super(QTNetworkManager, self).createRequest(operation, request, data)
-    #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
+        reply = super(QTNetworkManager, self).createRequest(operation, request, data)
+
+
+        # connect to handler.
+        reply.ignoreSslErrors([
+            QSslError(QSslError.NoError),
+            QSslError(QSslError.UnableToGetIssuerCertificate),
+            QSslError(QSslError.UnableToDecryptCertificateSignature),
+            QSslError(QSslError.UnableToDecodeIssuerPublicKey),
+            QSslError(QSslError.CertificateSignatureFailed),
+            QSslError(QSslError.CertificateNotYetValid),
+            QSslError(QSslError.CertificateExpired),
+            QSslError(QSslError.InvalidNotBeforeField),
+            QSslError(QSslError.InvalidNotAfterField),
+            QSslError(QSslError.SelfSignedCertificate),
+            QSslError(QSslError.SelfSignedCertificateInChain),
+            QSslError(QSslError.UnableToGetLocalIssuerCertificate),
+            QSslError(QSslError.UnableToVerifyFirstCertificate),
+            QSslError(QSslError.CertificateRevoked),
+            QSslError(QSslError.InvalidCaCertificate),
+            QSslError(QSslError.PathLengthExceeded),
+            QSslError(QSslError.InvalidPurpose),
+            QSslError(QSslError.CertificateUntrusted),
+            QSslError(QSslError.CertificateRejected),
+            QSslError(QSslError.SubjectIssuerMismatch),
+            QSslError(QSslError.AuthorityIssuerSerialNumberMismatch),
+            QSslError(QSslError.NoPeerCertificate),
+            QSslError(QSslError.HostNameMismatch),
+            QSslError(QSslError.UnspecifiedError),
+            QSslError(QSslError.NoSslSupport),
+            QSslError(QSslError.CertificateBlacklisted)
+        ])
+        reply.sslErrors.connect(self._reply_ssl_errors)
+        reply.error.connect(self._reply_error)
+        reply.finished.connect(self._reply_finished)
+        return reply
+
+#     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
     #     reply = QTNetworkReply(self, reply,operation)
     #
     #     # add Base-Url header, then we can get it from QWebView
@@ -321,7 +427,46 @@ class QTNetworkManager(QNetworkAccessManager):
     # Event Handlers
     def _ssl_errors(self,reply, errors):
         logger.debug("SSL error occured while requesting: %s . Will try to ignore" % reply.url())
-        reply.ignoreSslErrors()
+        logger.debug("errors: %s", errors)
+        reply.ignoreSslErrors([
+            QSslError(QSslError.NoError),
+            QSslError(QSslError.UnableToGetIssuerCertificate),
+            QSslError(QSslError.UnableToDecryptCertificateSignature),
+            QSslError(QSslError.UnableToDecodeIssuerPublicKey),
+            QSslError(QSslError.CertificateSignatureFailed),
+            QSslError(QSslError.CertificateNotYetValid),
+            QSslError(QSslError.CertificateExpired),
+            QSslError(QSslError.InvalidNotBeforeField),
+            QSslError(QSslError.InvalidNotAfterField),
+            QSslError(QSslError.SelfSignedCertificate),
+            QSslError(QSslError.SelfSignedCertificateInChain),
+            QSslError(QSslError.UnableToGetLocalIssuerCertificate),
+            QSslError(QSslError.UnableToVerifyFirstCertificate),
+            QSslError(QSslError.CertificateRevoked),
+            QSslError(QSslError.InvalidCaCertificate),
+            QSslError(QSslError.PathLengthExceeded),
+            QSslError(QSslError.InvalidPurpose),
+            QSslError(QSslError.CertificateUntrusted),
+            QSslError(QSslError.CertificateRejected),
+            QSslError(QSslError.SubjectIssuerMismatch),
+            QSslError(QSslError.AuthorityIssuerSerialNumberMismatch),
+            QSslError(QSslError.NoPeerCertificate),
+            QSslError(QSslError.HostNameMismatch),
+            QSslError(QSslError.UnspecifiedError),
+            QSslError(QSslError.NoSslSupport),
+            QSslError(QSslError.CertificateBlacklisted)
+        ])
+
+    def _reply_ssl_errors(self, errors):
+        logger.debug("Reply ssl errors:")
+        # self.ignoreSslErrors();
+    def _reply_error(self, error):
+        logger.debug("Reply network error: %s" % error)
+
+
+    def _reply_finished(self):
+        logger.debug("Reply finished")
+    # self.ignoreSslErrors();
 
 # class QTNetworkReply(QNetworkReply):
 #
