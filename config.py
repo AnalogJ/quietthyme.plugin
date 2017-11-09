@@ -274,28 +274,6 @@ class QTNetworkManager(QNetworkAccessManager):
         self.sslErrors.connect(self._ssl_errors)
         self.frame_origin = frame_origin
 
-        # set SSL configuration
-        # sslCfg = QSslConfiguration.defaultConfiguration()
-        # logger.debug(sys._getframe().f_code.co_name, sslCfg.protocol(), type)
-        # sslCfg.setPeerVerifyMode(QSslSocket.VerifyNone)
-        # sslCfg.setProtocol(2)
-        #
-        # QSslConfiguration.setDefaultConfiguration(sslCfg)
-
-        sslConfig = QSslConfiguration.defaultConfiguration()
-        sslConfig.setProtocol(QSsl.SslV3)
-        sslConfig.setPeerVerifyDepth(1)
-        sslConfig.setPeerVerifyMode(QSslSocket.VerifyNone)
-        sslConfig.setSslOption(QSsl.SslOptionDisableServerNameIndication, False)
-        sslConfig.setSslOption(QSsl.SslOptionDisableLegacyRenegotiation, False)
-        # sslConfig.setSslOption(QSsl.SslOptionDisableServerCipherPreference, False)
-
-        # sslConfig.setProtocol(2)
-
-        #certs = sslConfig.caCertificates()
-        #certs.append(QSslCertificate.fromData("CaCertificates"))
-        # QSslSocket.addDefaultCaCertificates(QSslCertificate.fromData("CaCertificates"))
-        QSslConfiguration.setDefaultConfiguration(sslConfig)
 
 
     def set_bearer_token(self, bearer_token=None):
@@ -303,60 +281,21 @@ class QTNetworkManager(QNetworkAccessManager):
 
     def createRequest(self, operation, request, data):
         logger.debug(sys._getframe().f_code.co_name)
-        logger.debug("BEFORE BASE")
-
 
         request_host = request.url().host()
         request_path = request.url().path()
 
         quietthyme_host = QUrl(prefs['web_base']).host()
-        logger.debug("AFTER BASE")
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             logger.debug("Adding QT Auth header", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
-        #if quietthyme_host == request_host:
-        logger.debug('Befpre Confire')
-
-        sslCfg = QSslConfiguration.defaultConfiguration()
-        logger.debug('getting SSL CONFIG TLS1')
-        # sslCfg.setPeerVerifyDepth(0)
-        sslCfg.setPeerVerifyMode(QSslSocket.QueryPeer)
-        # sslCfg.setPeerVerifyName('sni76592.cloudflaressl.com')
-        sslCfg.setProtocol(QSsl.TlsV1_0)
-        sslCfg.setSslOption(QSsl.SslOptionDisableServerNameIndication, False)
-        sslCfg.setSslOption(QSsl.SslOptionDisableLegacyRenegotiation, False)
-        # sslCfg.setSslOption(QSsl.SslOptionDisableServerCipherPreference, False)
-        # certs = sslCfg.caCertificates()
-        # certs.append(QSslCertificate.fromData("CaCertificates"))
-        # sslCfg.setCaCertificates(certs)
-
         certs = QSslSocket.systemCaCertificates()
-        # bundle = QSslCertificate.fromPath("/Users/jason/repos/quietthyme.plugin/quietthyme.bundle.pem", QSsl.Pem, QRegExp.Wildcard)
-        # certs += bundle
-        # logger.debug(QSslCertificate.verify(bundle, 'beta.quietthyme.com'))
-
+        sslCfg = QSslConfiguration.defaultConfiguration()
+        sslCfg.setProtocol(QSsl.TlsV1_0)
         sslCfg.setCaCertificates(certs)
-
-
         request.setSslConfiguration(sslCfg)
-        logger.debug('AFTER Confire')
-
-        logger.debug('SUPPORTS SSL %s' % QSslSocket.supportsSsl())
-        logger.debug("Qt version: %s"  % QT_VERSION_STR)
-        logger.debug("PyQt version: %s"  % PYQT_VERSION_STR)
-        logger.debug("SIP version: %s"  % SIP_VERSION_STR)
-        logger.debug("OpenSSL version: %s"  % ssl.OPENSSL_VERSION)
-        logger.debug("PROTOCOL: %s" % sslCfg.protocol())
-        logger.debug("Verify bundle: ")
-
-
-
-        #     #TODO Huge hack. only because QT5 cant seeem to consistently communicate over SSL when using sni. ie cloudflare.
-        #     url = request.url()
-        #     url.setScheme('http')
-        #     request.setUrl(url)
 
         if self.frame_origin:
             #adding the current resource request to the security origin witelist.
@@ -371,95 +310,21 @@ class QTNetworkManager(QNetworkAccessManager):
 
         reply = super(QTNetworkManager, self).createRequest(operation, request, data)
 
-
-        # connect to handler.
-        reply.ignoreSslErrors([
-            QSslError(QSslError.NoError),
-            QSslError(QSslError.UnableToGetIssuerCertificate),
-            QSslError(QSslError.UnableToDecryptCertificateSignature),
-            QSslError(QSslError.UnableToDecodeIssuerPublicKey),
-            QSslError(QSslError.CertificateSignatureFailed),
-            QSslError(QSslError.CertificateNotYetValid),
-            QSslError(QSslError.CertificateExpired),
-            QSslError(QSslError.InvalidNotBeforeField),
-            QSslError(QSslError.InvalidNotAfterField),
-            QSslError(QSslError.SelfSignedCertificate),
-            QSslError(QSslError.SelfSignedCertificateInChain),
-            QSslError(QSslError.UnableToGetLocalIssuerCertificate),
-            QSslError(QSslError.UnableToVerifyFirstCertificate),
-            QSslError(QSslError.CertificateRevoked),
-            QSslError(QSslError.InvalidCaCertificate),
-            QSslError(QSslError.PathLengthExceeded),
-            QSslError(QSslError.InvalidPurpose),
-            QSslError(QSslError.CertificateUntrusted),
-            QSslError(QSslError.CertificateRejected),
-            QSslError(QSslError.SubjectIssuerMismatch),
-            QSslError(QSslError.AuthorityIssuerSerialNumberMismatch),
-            QSslError(QSslError.NoPeerCertificate),
-            QSslError(QSslError.HostNameMismatch),
-            QSslError(QSslError.UnspecifiedError),
-            QSslError(QSslError.NoSslSupport),
-            QSslError(QSslError.CertificateBlacklisted)
-        ])
         reply.sslErrors.connect(self._reply_ssl_errors)
         reply.error.connect(self._reply_error)
         reply.finished.connect(self._reply_finished)
         return reply
-
-#     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
-    #     reply = QTNetworkReply(self, reply,operation)
-    #
-    #     # add Base-Url header, then we can get it from QWebView
-    #     # WTF?
-    #     if isinstance(request.originatingObject(), QWebFrame):
-    #         try:
-    #             reply.setRawHeader(QByteArray('Base-Url'), QByteArray('').append(request.originatingObject().page().mainFrame().baseUrl().toString()))
-    #             # reply.setRawHeader("Content-Security-Policy", "default-src '*'; style-src '*' 'unsafe-inline'; script-src '*' 'unsafe-inline' 'unsafe-eval'")
-    #             # reply.setRawHeader("Access-Control-Allow-Origin", "*")
-    #             # reply.setRawHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    #         except Exception as e:
-    #             print(e)
-    #
-    #
-    #     return reply
 
     ################################################################################################################
     # Event Handlers
     def _ssl_errors(self,reply, errors):
         logger.debug("SSL error occured while requesting: %s . Will try to ignore" % reply.url())
         logger.debug("errors: %s", errors)
-        reply.ignoreSslErrors([
-            QSslError(QSslError.NoError),
-            QSslError(QSslError.UnableToGetIssuerCertificate),
-            QSslError(QSslError.UnableToDecryptCertificateSignature),
-            QSslError(QSslError.UnableToDecodeIssuerPublicKey),
-            QSslError(QSslError.CertificateSignatureFailed),
-            QSslError(QSslError.CertificateNotYetValid),
-            QSslError(QSslError.CertificateExpired),
-            QSslError(QSslError.InvalidNotBeforeField),
-            QSslError(QSslError.InvalidNotAfterField),
-            QSslError(QSslError.SelfSignedCertificate),
-            QSslError(QSslError.SelfSignedCertificateInChain),
-            QSslError(QSslError.UnableToGetLocalIssuerCertificate),
-            QSslError(QSslError.UnableToVerifyFirstCertificate),
-            QSslError(QSslError.CertificateRevoked),
-            QSslError(QSslError.InvalidCaCertificate),
-            QSslError(QSslError.PathLengthExceeded),
-            QSslError(QSslError.InvalidPurpose),
-            QSslError(QSslError.CertificateUntrusted),
-            QSslError(QSslError.CertificateRejected),
-            QSslError(QSslError.SubjectIssuerMismatch),
-            QSslError(QSslError.AuthorityIssuerSerialNumberMismatch),
-            QSslError(QSslError.NoPeerCertificate),
-            QSslError(QSslError.HostNameMismatch),
-            QSslError(QSslError.UnspecifiedError),
-            QSslError(QSslError.NoSslSupport),
-            QSslError(QSslError.CertificateBlacklisted)
-        ])
 
     def _reply_ssl_errors(self, errors):
         logger.debug("Reply ssl errors:")
         # self.ignoreSslErrors();
+
     def _reply_error(self, error):
         logger.debug("Reply network error: %s" % error)
 
@@ -467,115 +332,6 @@ class QTNetworkManager(QNetworkAccessManager):
     def _reply_finished(self):
         logger.debug("Reply finished")
     # self.ignoreSslErrors();
-
-# class QTNetworkReply(QNetworkReply):
-#
-#     """
-#     Credits:
-#     * https://code.google.com/p/webscraping/source/browse/webkit.py#154
-#     * http://gitorious.org/qtwebkit/performance/blobs/master/host-tools/mirror/main.cpp
-#     """
-#     def __init__(self, parent, original_reply, operation):
-#         super(QNetworkReply,self).__init__(parent)
-#
-#         self.original_reply = original_reply # reply to proxy
-#         self.operation = operation
-#         self.data = '' # contains downloaded data
-#         self.buffer = '' # contains buffer of data to read
-#         self.setOpenMode(QNetworkReply.ReadOnly | QNetworkReply.Unbuffered)
-#
-#         # connect signal from proxy reply
-#         self.original_reply.metaDataChanged.connect(self.applyMetaData)
-#         self.original_reply.readyRead.connect(self.readInternal)
-#         self.original_reply.error.connect(self.error)
-#         self.original_reply.finished.connect(self.finished)
-#         self.original_reply.uploadProgress.connect(self.uploadProgress)
-#         self.original_reply.downloadProgress.connect(self.downloadProgress)
-#         self.original_reply.sslErrors.connect(self.sslErrors)
-#
-#
-#     def sslErrors(self,errors):
-#         print('===========QT REPLY ERRORS')
-#         for error in errors:
-#             print(error.errorString())
-#         self.ignoreSslErrors()
-#
-#     def __getattribute__(self, attr):
-#         """Send undefined methods straight through to proxied reply
-#         """
-#         # send these attributes through to proxy reply
-#         if attr in ('operation', 'request', 'url', 'abort', 'close'):#, 'isSequential'):
-#             value = self.original_reply.__getattribute__(attr)
-#         else:
-#             value = QNetworkReply.__getattribute__(self, attr)
-#         #print attr, value
-#         return value
-#
-#     def abort(self):
-#         pass # qt requires that this be defined
-#
-#     def isSequential(self):
-#         return True
-#
-#     def applyMetaData(self):
-#         for header in self.original_reply.rawHeaderList():
-#             #print('RAW HEADER: %s =>  %s' % (header, self.original_reply.rawHeader(header)))
-#             self.setRawHeader(header, self.original_reply.rawHeader(header))
-#
-#         headers = (
-#             QNetworkRequest.ContentTypeHeader,
-#             QNetworkRequest.ContentLengthHeader,
-#             QNetworkRequest.LocationHeader,
-#             QNetworkRequest.LastModifiedHeader,
-#             QNetworkRequest.SetCookieHeader,
-#         )
-#         for header in headers:
-#             self.setHeader(header, self.original_reply.header(header))
-#
-#         attributes = (
-#             QNetworkRequest.HttpStatusCodeAttribute,
-#             QNetworkRequest.HttpReasonPhraseAttribute,
-#             QNetworkRequest.RedirectionTargetAttribute,
-#             QNetworkRequest.ConnectionEncryptedAttribute,
-#             QNetworkRequest.CacheLoadControlAttribute,
-#             QNetworkRequest.CacheSaveControlAttribute,
-#             QNetworkRequest.SourceIsFromCacheAttribute,
-#
-#         )
-#         for attr in attributes:
-#             self.setAttribute(attr, self.original_reply.attribute(attr))
-#
-#         # make sure the content-security-policy header is open (otherwise we run into blankscreen/javasccritp issues)
-#         self.setRawHeader("Content-Security-Policy", "default-src '*'; style-src '*' 'unsafe-inline'; script-src '*' 'unsafe-inline' 'unsafe-eval'")
-#         #self.setRawHeader("Access-Control-Allow-Origin", "*")
-#         #self.setRawHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-#         self.metaDataChanged.emit()
-#
-#     def bytesAvailable(self):
-#         """
-#         How many bytes in the buffer are available to be read
-#         """
-#
-#         return len(self.buffer) + QNetworkReply.bytesAvailable(self)
-#
-#     def readInternal(self):
-#         """
-#         New data available to read
-#         """
-#
-#         s = self.original_reply.readAll()
-#         self.data += s
-#         self.buffer += s
-#         self.readyRead.emit()
-#
-#     def readData(self, size):
-#         """Return up to size bytes from buffer
-#         """
-#         size = min(size, len(self.buffer))
-#         data, self.buffer = self.buffer[:size], self.buffer[size:]
-#         return str(data)
-#
-
 
 
 # For testing ConfigWidget, run from command line:
