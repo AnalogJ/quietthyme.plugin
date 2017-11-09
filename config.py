@@ -8,8 +8,14 @@ __copyright__ = '2011, Jason Kulatunga <jason@quietthyme.com>'
 __docformat__ = 'restructuredtext en'
 
 from PyQt5.Qt import QWidget, QVBoxLayout, QWebView,QWebPage, QWebSecurityOrigin,QWebInspector, QSsl, QUrl, QSize, \
-    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, \
-    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir
+    QNetworkAccessManager, QWebSettings, QNetworkReply, QNetworkRequest,QWebFrame,QByteArray, QSslConfiguration, QSslError, \
+    QSslSocket, QSslCertificate, QCheckBox, QSizePolicy, QStandardPaths, QMessageBox, QTemporaryDir, QRegExp
+
+from PyQt5.QtCore import QT_VERSION_STR
+from PyQt5.Qt import PYQT_VERSION_STR
+from sip import SIP_VERSION_STR
+import ssl
+
 import logging, sys
 from calibre.utils.config import JSONConfig
 logger = logging.getLogger(__name__)
@@ -268,6 +274,8 @@ class QTNetworkManager(QNetworkAccessManager):
         self.sslErrors.connect(self._ssl_errors)
         self.frame_origin = frame_origin
 
+
+
     def set_bearer_token(self, bearer_token=None):
         self.bearer_token = bearer_token
 
@@ -276,17 +284,18 @@ class QTNetworkManager(QNetworkAccessManager):
 
         request_host = request.url().host()
         request_path = request.url().path()
+
         quietthyme_host = QUrl(prefs['web_base']).host()
 
         if self.bearer_token and (quietthyme_host == request_host): #and not(request_path.startswith('/link/callback')):
             logger.debug("Adding QT Auth header", request.url())
             request.setRawHeader("Authorization", "Bearer %s" % self.bearer_token)
 
-        if quietthyme_host == request_host:
-            #TODO Huge hack. only because QT5 cant seeem to consistently communicate over SSL when using sni. ie cloudflare.
-            url = request.url()
-            url.setScheme('http')
-            request.setUrl(url)
+        certs = QSslSocket.systemCaCertificates()
+        sslCfg = QSslConfiguration.defaultConfiguration()
+        sslCfg.setProtocol(QSsl.TlsV1_0)
+        sslCfg.setCaCertificates(certs)
+        request.setSslConfiguration(sslCfg)
 
         if self.frame_origin:
             #adding the current resource request to the security origin witelist.
@@ -299,138 +308,30 @@ class QTNetworkManager(QNetworkAccessManager):
 
         logger.debug("Requesting:", request.url())
 
-        return super(QTNetworkManager, self).createRequest(operation, request, data)
-    #     #if operation == self.GetOperation or operation == self.HeadOperation or operation == self.CustomOperation:
-    #     reply = QTNetworkReply(self, reply,operation)
-    #
-    #     # add Base-Url header, then we can get it from QWebView
-    #     # WTF?
-    #     if isinstance(request.originatingObject(), QWebFrame):
-    #         try:
-    #             reply.setRawHeader(QByteArray('Base-Url'), QByteArray('').append(request.originatingObject().page().mainFrame().baseUrl().toString()))
-    #             # reply.setRawHeader("Content-Security-Policy", "default-src '*'; style-src '*' 'unsafe-inline'; script-src '*' 'unsafe-inline' 'unsafe-eval'")
-    #             # reply.setRawHeader("Access-Control-Allow-Origin", "*")
-    #             # reply.setRawHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    #         except Exception as e:
-    #             print(e)
-    #
-    #
-    #     return reply
+        reply = super(QTNetworkManager, self).createRequest(operation, request, data)
+
+        reply.sslErrors.connect(self._reply_ssl_errors)
+        reply.error.connect(self._reply_error)
+        reply.finished.connect(self._reply_finished)
+        return reply
 
     ################################################################################################################
     # Event Handlers
     def _ssl_errors(self,reply, errors):
         logger.debug("SSL error occured while requesting: %s . Will try to ignore" % reply.url())
-        reply.ignoreSslErrors()
+        logger.debug("errors: %s", errors)
 
-# class QTNetworkReply(QNetworkReply):
-#
-#     """
-#     Credits:
-#     * https://code.google.com/p/webscraping/source/browse/webkit.py#154
-#     * http://gitorious.org/qtwebkit/performance/blobs/master/host-tools/mirror/main.cpp
-#     """
-#     def __init__(self, parent, original_reply, operation):
-#         super(QNetworkReply,self).__init__(parent)
-#
-#         self.original_reply = original_reply # reply to proxy
-#         self.operation = operation
-#         self.data = '' # contains downloaded data
-#         self.buffer = '' # contains buffer of data to read
-#         self.setOpenMode(QNetworkReply.ReadOnly | QNetworkReply.Unbuffered)
-#
-#         # connect signal from proxy reply
-#         self.original_reply.metaDataChanged.connect(self.applyMetaData)
-#         self.original_reply.readyRead.connect(self.readInternal)
-#         self.original_reply.error.connect(self.error)
-#         self.original_reply.finished.connect(self.finished)
-#         self.original_reply.uploadProgress.connect(self.uploadProgress)
-#         self.original_reply.downloadProgress.connect(self.downloadProgress)
-#         self.original_reply.sslErrors.connect(self.sslErrors)
-#
-#
-#     def sslErrors(self,errors):
-#         print('===========QT REPLY ERRORS')
-#         for error in errors:
-#             print(error.errorString())
-#         self.ignoreSslErrors()
-#
-#     def __getattribute__(self, attr):
-#         """Send undefined methods straight through to proxied reply
-#         """
-#         # send these attributes through to proxy reply
-#         if attr in ('operation', 'request', 'url', 'abort', 'close'):#, 'isSequential'):
-#             value = self.original_reply.__getattribute__(attr)
-#         else:
-#             value = QNetworkReply.__getattribute__(self, attr)
-#         #print attr, value
-#         return value
-#
-#     def abort(self):
-#         pass # qt requires that this be defined
-#
-#     def isSequential(self):
-#         return True
-#
-#     def applyMetaData(self):
-#         for header in self.original_reply.rawHeaderList():
-#             #print('RAW HEADER: %s =>  %s' % (header, self.original_reply.rawHeader(header)))
-#             self.setRawHeader(header, self.original_reply.rawHeader(header))
-#
-#         headers = (
-#             QNetworkRequest.ContentTypeHeader,
-#             QNetworkRequest.ContentLengthHeader,
-#             QNetworkRequest.LocationHeader,
-#             QNetworkRequest.LastModifiedHeader,
-#             QNetworkRequest.SetCookieHeader,
-#         )
-#         for header in headers:
-#             self.setHeader(header, self.original_reply.header(header))
-#
-#         attributes = (
-#             QNetworkRequest.HttpStatusCodeAttribute,
-#             QNetworkRequest.HttpReasonPhraseAttribute,
-#             QNetworkRequest.RedirectionTargetAttribute,
-#             QNetworkRequest.ConnectionEncryptedAttribute,
-#             QNetworkRequest.CacheLoadControlAttribute,
-#             QNetworkRequest.CacheSaveControlAttribute,
-#             QNetworkRequest.SourceIsFromCacheAttribute,
-#
-#         )
-#         for attr in attributes:
-#             self.setAttribute(attr, self.original_reply.attribute(attr))
-#
-#         # make sure the content-security-policy header is open (otherwise we run into blankscreen/javasccritp issues)
-#         self.setRawHeader("Content-Security-Policy", "default-src '*'; style-src '*' 'unsafe-inline'; script-src '*' 'unsafe-inline' 'unsafe-eval'")
-#         #self.setRawHeader("Access-Control-Allow-Origin", "*")
-#         #self.setRawHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-#         self.metaDataChanged.emit()
-#
-#     def bytesAvailable(self):
-#         """
-#         How many bytes in the buffer are available to be read
-#         """
-#
-#         return len(self.buffer) + QNetworkReply.bytesAvailable(self)
-#
-#     def readInternal(self):
-#         """
-#         New data available to read
-#         """
-#
-#         s = self.original_reply.readAll()
-#         self.data += s
-#         self.buffer += s
-#         self.readyRead.emit()
-#
-#     def readData(self, size):
-#         """Return up to size bytes from buffer
-#         """
-#         size = min(size, len(self.buffer))
-#         data, self.buffer = self.buffer[:size], self.buffer[size:]
-#         return str(data)
-#
+    def _reply_ssl_errors(self, errors):
+        logger.debug("Reply ssl errors:")
+        # self.ignoreSslErrors();
 
+    def _reply_error(self, error):
+        logger.debug("Reply network error: %s" % error)
+
+
+    def _reply_finished(self):
+        logger.debug("Reply finished")
+    # self.ignoreSslErrors();
 
 
 # For testing ConfigWidget, run from command line:
